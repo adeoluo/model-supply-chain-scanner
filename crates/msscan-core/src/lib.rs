@@ -15,9 +15,11 @@ pub mod numpy;
 pub mod onnx;
 pub mod pickle;
 pub mod protobuf;
+pub mod report;
 pub mod safetensors;
 pub mod savedmodel;
 pub mod scan;
+pub mod service;
 pub mod zip;
 
 pub use finding::{Finding, Rule, Severity, RULES};

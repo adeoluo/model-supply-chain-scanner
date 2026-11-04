@@ -1,12 +1,7 @@
 services:
-  application:
+  msscan:
     build: .
-    env_file: .env
     ports:
-      - "8000:8000"
+      - "8080:8080"
+    read_only: true
     restart: unless-stopped
-    healthcheck:
-      test: ["CMD", "python", "-c", "import model_supply_chain_scanner"]
-      interval: 30s
-      timeout: 3s
-      retries: 3

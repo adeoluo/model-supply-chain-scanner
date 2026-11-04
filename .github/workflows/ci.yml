@@ -14,8 +14,8 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  quality:
-    name: format · lint · type · test
+  python:
+    name: python ${{ matrix.python-version }} (lint, type, tests, coverage)
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
@@ -23,6 +23,9 @@ jobs:
         python-version: ["3.11", "3.12"]
     steps:
       - uses: actions/checkout@v7
+
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
 
       - name: Install uv
         uses: astral-sh/setup-uv@v7
@@ -32,19 +35,19 @@ jobs:
       - name: Set up Python ${{ matrix.python-version }}
         run: uv python install ${{ matrix.python-version }}
 
-      - name: Install dependencies
-        run: uv sync --all-extras --dev
+      - name: Install dependencies (builds the Rust extension)
+        run: uv sync --python ${{ matrix.python-version }}
 
       - name: Format check (ruff)
-        run: uv run ruff format --check .
+        run: uv run ruff format --check src tests scripts
 
       - name: Lint (ruff)
-        run: uv run ruff check .
+        run: uv run ruff check src tests scripts
 
       - name: Type check (mypy)
         run: uv run mypy src
 
-      - name: Test (+ coverage gate)
+      - name: Tests with the coverage gate
         run: uv run pytest --cov=src --cov-report=xml --cov-report=term-missing --cov-fail-under=80
 
       - name: Upload coverage
@@ -78,14 +81,34 @@ jobs:
         run: cargo llvm-cov --workspace --exclude msscan-py --fail-under-lines 85 --summary-only
 
   build:
-    name: build (package + image)
+    name: build (wheel, binary, image)
     runs-on: ubuntu-latest
-    needs: quality
+    needs: [python, rust]
     steps:
       - uses: actions/checkout@v7
+
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+
       - name: Install uv
         uses: astral-sh/setup-uv@v7
-      - name: Build package
+
+      - name: Build wheel and sdist
         run: uv build
-      - name: Build Docker image
-        run: docker build -t ${{ github.event.repository.name }}:ci .
+
+      - name: Build the binary and scan the fixtures
+        run: |
+          cargo build --release -p msscan
+          ./target/release/msscan scan --fail-on none tests/fixtures
+          ./target/release/msscan scan -f sarif --fail-on none -o fixtures.sarif tests/fixtures
+          test "$(jq '.runs[0].results | length' fixtures.sarif)" -gt 0
+
+      - name: Build and probe the Docker image
+        run: |
+          docker build -t msscan:ci .
+          docker run -d --name msscan -p 8080:8080 msscan:ci
+          for i in $(seq 1 30); do curl -sf localhost:8080/health && break; sleep 1; done
+          curl -sf localhost:8080/ready
+          printf '\x80\x02cos\ngetcwd\n)R.' | curl -sf --data-binary @- 'localhost:8080/v1/scan?name=m.pkl' | jq -e '.verdict == "malicious"'
+          curl -sf localhost:8080/metrics | grep msscan_files_scanned_total
+          docker rm -f msscan

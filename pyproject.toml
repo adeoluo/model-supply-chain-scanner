@@ -1,23 +1,16 @@
 [project]
 name = "model-supply-chain-scanner"
 version = "0.1.0"
-description = "One-line description."
+description = "Scan machine learning model files for code execution and unsafe content before loading them"
 readme = "README.md"
 requires-python = ">=3.11"
 license = { text = "MIT" }
 authors = [{ name = "Adeolu Ogunnoiki" }]
-dependencies = [
-    "pydantic>=2.0",
-    "pydantic-settings>=2.0",
-    "structlog>=24.0",
-]
+dependencies = []
+keywords = ["security", "pickle", "pytorch", "safetensors", "gguf", "onnx", "keras", "supply-chain"]
 
-[project.optional-dependencies]
-# install with: uv sync --extra ml
-ml = [
-    "numpy>=1.26",
-    "torch>=2.2",
-]
+[project.scripts]
+msscan-py = "msscan.cli:main"
 
 [dependency-groups]
 dev = [
@@ -25,14 +18,23 @@ dev = [
     "mypy>=1.14",
     "pytest>=8.0",
     "pytest-cov>=5.0",
+    "hypothesis>=6.100",
+    "maturin>=1.7,<2",
 ]
 
 [build-system]
-requires = ["hatchling"]
-build-backend = "hatchling.build"
+requires = ["maturin>=1.7,<2"]
+build-backend = "maturin"
 
-[tool.hatch.build.targets.wheel]
-packages = ["src/model_supply_chain_scanner"]
+# The Rust core is compiled into the package as `msscan.msscan_rs`; the Python layer adds
+# typed results, the command line and a reference pickle analyzer for parity tests.
+[tool.maturin]
+python-source = "src"
+manifest-path = "crates/msscan-py/Cargo.toml"
+module-name = "msscan.msscan_rs"
+
+[tool.uv]
+cache-keys = [{ file = "pyproject.toml" }, { file = "Cargo.toml" }, { file = "crates/**/Cargo.toml" }, { file = "crates/**/*.rs" }]
 
 # ---------------------------------------------------------------------------
 # Tooling
@@ -40,25 +42,30 @@ packages = ["src/model_supply_chain_scanner"]
 [tool.ruff]
 line-length = 100
 target-version = "py311"
-src = ["src", "tests"]
+src = ["src", "tests", "benchmarks"]
+extend-exclude = ["benchmarks/.venv"]
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "N", "UP", "B", "SIM", "C4", "RUF"]
 ignore = []
 
 [tool.ruff.lint.isort]
-known-first-party = ["model_supply_chain_scanner"]
+known-first-party = ["msscan"]
 
 [tool.mypy]
 python_version = "3.11"
 strict = true
 warn_unused_configs = true
 disallow_untyped_defs = true
-plugins = ["pydantic.mypy"]
+
+[[tool.mypy.overrides]]
+module = ["msscan.msscan_rs"]
+ignore_missing_imports = true
 
 [tool.pytest.ini_options]
 addopts = "-ra -q"
 testpaths = ["tests"]
+pythonpath = ["."]
 
 [tool.coverage.run]
 source = ["src"]

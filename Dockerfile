@@ -1,24 +1,20 @@
 # syntax=docker/dockerfile:1
 
-# ---- builder ----
-FROM python:3.12-slim AS builder
-COPY --from=ghcr.io/astral-sh/uv:latest /uv /usr/local/bin/uv
-WORKDIR /application
-ENV UV_COMPILE_BYTECODE=1 UV_LINK_MODE=copy
-COPY pyproject.toml uv.lock* ./
-RUN --mount=type=cache,target=/root/.cache/uv \
-    uv sync --frozen --no-dev --no-install-project || uv sync --no-dev --no-install-project
-COPY . .
-RUN --mount=type=cache,target=/root/.cache/uv uv sync --frozen --no-dev || uv sync --no-dev
+# ---- build the static scanner binary ----
+FROM rust:1-slim-bookworm AS builder
+WORKDIR /src
+COPY Cargo.toml Cargo.lock rustfmt.toml ./
+COPY crates ./crates
+RUN --mount=type=cache,target=/usr/local/cargo/registry \
+    --mount=type=cache,target=/src/target \
+    cargo build --release --locked -p msscan && cp target/release/msscan /msscan
 
-# ---- runtime ----
-FROM python:3.12-slim AS runtime
-RUN useradd --create-home --uid 1000 application
-WORKDIR /application
-COPY --from=builder --chown=application:application /application /application
-ENV PATH="/application/.venv/bin:$PATH" PYTHONUNBUFFERED=1
-USER application
-EXPOSE 8000
-HEALTHCHECK --interval=30s --timeout=3s --retries=3 \
-    CMD python -c "import model_supply_chain_scanner" || exit 1
-CMD ["python", "-m", "model_supply_chain_scanner"]
+# ---- runtime: the binary only ----
+FROM debian:bookworm-slim AS runtime
+RUN useradd --create-home --uid 1000 msscan
+COPY --from=builder /msscan /usr/local/bin/msscan
+USER msscan
+EXPOSE 8080
+HEALTHCHECK --interval=30s --timeout=3s --retries=3 CMD ["msscan", "--version"]
+ENTRYPOINT ["msscan"]
+CMD ["serve", "--addr", "0.0.0.0:8080"]
