@@ -56,6 +56,9 @@ pub struct Stats {
     pub archive_entries: u64,
     pub members_scanned: u64,
     pub joblib_arrays: u64,
+    /// Set when only a prefix of the file was supplied and the header continues past it.
+    #[serde(default)]
+    pub prefix_incomplete: bool,
 }
 
 /// The scan result for one file.

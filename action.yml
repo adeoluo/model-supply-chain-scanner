@@ -1,0 +1,50 @@
+name: Model Supply Chain Scanner
+description: Scan ML model files (pickle, PyTorch, joblib, NumPy, Keras, SavedModel, ONNX, GGUF, safetensors) for code execution and unsafe content.
+author: Adeolu Ogunnoiki
+branding:
+  icon: shield
+  color: blue
+
+inputs:
+  path:
+    description: File or directory to scan.
+    default: "."
+  format:
+    description: Report format (sarif, json or text).
+    default: sarif
+  output:
+    description: Report file path.
+    default: msscan.sarif
+  fail-on:
+    description: Fail the step when a finding has at least this severity (info, low, medium, high, critical, none).
+    default: high
+  args:
+    description: Extra arguments for msscan scan, for example --hash.
+    default: ""
+
+outputs:
+  report:
+    description: Path of the report file.
+    value: ${{ inputs.output }}
+
+runs:
+  using: composite
+  steps:
+    - name: Build msscan
+      shell: bash
+      run: |
+        cargo build --release --locked -p msscan \
+          --manifest-path "$GITHUB_ACTION_PATH/Cargo.toml" --target-dir "$RUNNER_TEMP/msscan-target"
+        cp "$RUNNER_TEMP/msscan-target/release/msscan" "$RUNNER_TEMP/msscan"
+
+    - name: Scan
+      shell: bash
+      env:
+        SCAN_PATH: ${{ inputs.path }}
+        SCAN_FORMAT: ${{ inputs.format }}
+        SCAN_OUTPUT: ${{ inputs.output }}
+        SCAN_FAIL_ON: ${{ inputs.fail-on }}
+        SCAN_ARGS: ${{ inputs.args }}
+      run: |
+        # shellcheck disable=SC2086
+        "$RUNNER_TEMP/msscan" scan "$SCAN_PATH" --format "$SCAN_FORMAT" --output "$SCAN_OUTPUT" --fail-on "$SCAN_FAIL_ON" $SCAN_ARGS

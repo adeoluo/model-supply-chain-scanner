@@ -1,38 +1,49 @@
----
-title: System Architecture - Model Supply Chain Scanner
-config:
-  theme: base
-  themeVariables:
-    fontFamily: "Inter, system-ui, sans-serif"
-    primaryColor: "#F8FAFC"
-    primaryBorderColor: "#1E293B"
-    primaryTextColor: "#1E293B"
-    lineColor: "#64748B"
-    clusterBkg: "#E2E8F0"
-    clusterBorder: "#94A3B8"
----
 flowchart LR
+    classDef edge     fill:#F59E0B,stroke:#1E293B,color:#1E293B,stroke-width:1px;
     classDef core     fill:#6366F1,stroke:#1E293B,color:#ffffff,stroke-width:1px;
     classDef data     fill:#10B981,stroke:#1E293B,color:#ffffff,stroke-width:1px;
-    classDef external fill:#F59E0B,stroke:#1E293B,color:#1E293B,stroke-width:1px;
-    classDef danger   fill:#EF4444,stroke:#1E293B,color:#ffffff,stroke-width:1px;
+    classDef control  fill:#0EA5E9,stroke:#1E293B,color:#ffffff,stroke-width:1px;
+    classDef obs      fill:#CBD5E1,stroke:#1E293B,color:#1E293B,stroke-width:1px;
 
-    User([User]):::external
-
-    subgraph Application["Application Service"]
-        API[API Layer]:::core
-        Core[Core Engine]:::core
-        Evaluation[Evaluation Harness]:::core
+    subgraph Interfaces["Interfaces"]
+        direction TB
+        User([Developer or CI]):::edge
+        CLI["msscan CLI<br/>scan, rules, serve"]:::edge
+        Py["Python package<br/>PyO3 bindings"]:::edge
+        Service["HTTP service<br/>POST /v1/scan"]:::core
+        User --> CLI ~~~ Py ~~~ Service
     end
 
-    Cache[(Semantic Cache)]:::data
-    Store[(Datastore / Index)]:::data
-    LLM{{LLM Provider}}:::external
+    subgraph Input["Input handling"]
+        direction TB
+        Files[("Model files<br/>memory-mapped")]:::data
+        Sniff["Format detection<br/>magic bytes"]:::control
+        Zip["Zip reader<br/>cross-checks"]:::core
+        Decomp["Decompression<br/>size-limited"]:::control
+        Files --> Sniff --> Zip ~~~ Decomp
+    end
 
-    User -->|request| API
-    API --> Core
-    Core -->|lookup| Cache
-    Core -->|retrieve| Store
-    Core -->|completion| LLM
-    Core -.->|traces/metrics| Evaluation
-    Core -->|response| User
+    subgraph Analyzers["Analyzers"]
+        direction TB
+        VM["Pickle VM<br/>symbolic opcodes"]:::core
+        Policy["Global tiers<br/>allow, deny"]:::control
+        Graphs["Graph checks<br/>Keras, TF, ONNX"]:::core
+        Headers["Header checks<br/>GGUF, safetensors"]:::core
+        Jinja["Chat templates<br/>injection"]:::core
+        Limits["Limits<br/>opcodes, sizes"]:::control
+        Limits ~~~ VM --> Policy ~~~ Graphs ~~~ Headers --> Jinja
+    end
+
+    subgraph Out["Outputs, evaluation"]
+        direction TB
+        Reports["Reports<br/>text, JSON, SARIF"]:::obs
+        Metrics["Metrics<br/>Prometheus text"]:::obs
+        Bench["Inert corpus<br/>validated"]:::obs
+        Hub["Hub corpus<br/>headers, stubs"]:::obs
+        Score["Verdict<br/>noisy-or risk"]:::control
+        Score --> Reports ~~~ Metrics ~~~ Bench ~~~ Hub
+    end
+
+    Interfaces -->|files| Input
+    Input -->|members| Analyzers
+    Analyzers -->|findings| Out

@@ -1,0 +1,262 @@
+[
+ {
+  "file": "opus-mt-en-de-pytorch_model.bin",
+  "size_mb": 284.1,
+  "tool": "msscan",
+  "wall_s": 0.0,
+  "peak_rss_mb": 3.6,
+  "runs": [
+   2.4,
+   0.0,
+   0.0
+  ],
+  "status": "ok"
+ },
+ {
+  "file": "opus-mt-en-de-pytorch_model.bin",
+  "size_mb": 284.1,
+  "tool": "picklescan",
+  "wall_s": 0.15,
+  "peak_rss_mb": 25.5,
+  "runs": [
+   0.28,
+   0.15,
+   0.14
+  ],
+  "status": "ok"
+ },
+ {
+  "file": "opus-mt-en-de-pytorch_model.bin",
+  "size_mb": 284.1,
+  "tool": "modelscan",
+  "wall_s": 0.44,
+  "peak_rss_mb": 38.7,
+  "runs": [
+   0.44,
+   0.32,
+   0.74
+  ],
+  "status": "ok"
+ },
+ {
+  "file": "opus-mt-en-de-pytorch_model.bin",
+  "size_mb": 284.1,
+  "tool": "fickling",
+  "wall_s": 6.53,
+  "peak_rss_mb": 250.8,
+  "runs": [
+   4.09,
+   9.65,
+   6.53
+  ],
+  "status": "ok"
+ },
+ {
+  "file": "opus-mt-en-de-pytorch_model.bin",
+  "size_mb": 284.1,
+  "tool": "msscan-python",
+  "wall_s": 0.33,
+  "peak_rss_mb": 19.7,
+  "runs": [
+   0.61,
+   0.33,
+   0.27
+  ],
+  "status": "ok"
+ },
+ {
+  "file": "opus-mt-en-fr-pytorch_model.bin",
+  "size_mb": 286.9,
+  "tool": "msscan",
+  "wall_s": 0.01,
+  "peak_rss_mb": 3.5,
+  "runs": [
+   0.06,
+   0.01,
+   0.0
+  ],
+  "status": "ok"
+ },
+ {
+  "file": "opus-mt-en-fr-pytorch_model.bin",
+  "size_mb": 286.9,
+  "tool": "picklescan",
+  "wall_s": 0.21,
+  "peak_rss_mb": 25.5,
+  "runs": [
+   0.21,
+   0.29,
+   0.18
+  ],
+  "status": "ok"
+ },
+ {
+  "file": "opus-mt-en-fr-pytorch_model.bin",
+  "size_mb": 286.9,
+  "tool": "modelscan",
+  "wall_s": 0.47,
+  "peak_rss_mb": 38.8,
+  "runs": [
+   0.72,
+   0.46,
+   0.47
+  ],
+  "status": "ok"
+ },
+ {
+  "file": "opus-mt-en-fr-pytorch_model.bin",
+  "size_mb": 286.9,
+  "tool": "fickling",
+  "wall_s": 6.01,
+  "peak_rss_mb": 286.0,
+  "runs": [
+   9.76,
+   6.01,
+   4.47
+  ],
+  "status": "ok"
+ },
+ {
+  "file": "opus-mt-en-fr-pytorch_model.bin",
+  "size_mb": 286.9,
+  "tool": "msscan-python",
+  "wall_s": 0.18,
+  "peak_rss_mb": 21.0,
+  "runs": [
+   0.31,
+   0.06,
+   0.18
+  ],
+  "status": "ok"
+ },
+ {
+  "file": "qwen2.5-0.5b-model.safetensors",
+  "size_mb": 942.3,
+  "tool": "msscan",
+  "wall_s": 0.01,
+  "peak_rss_mb": 3.3,
+  "runs": [
+   0.03,
+   0.01,
+   0.01
+  ],
+  "status": "ok"
+ },
+ {
+  "file": "qwen2.5-0.5b-model.safetensors",
+  "size_mb": 942.3,
+  "tool": "picklescan",
+  "wall_s": 0.16,
+  "peak_rss_mb": 24.2,
+  "runs": [
+   0.19,
+   0.11,
+   0.16
+  ],
+  "status": "ok"
+ },
+ {
+  "file": "qwen2.5-0.5b-model.safetensors",
+  "size_mb": 942.3,
+  "tool": "modelscan",
+  "wall_s": 0.43,
+  "peak_rss_mb": 38.9,
+  "runs": [
+   0.84,
+   0.33,
+   0.43
+  ],
+  "status": "ok"
+ },
+ {
+  "file": "qwen2.5-0.5b-model.safetensors",
+  "size_mb": 942.3,
+  "tool": "fickling",
+  "wall_s": 6.72,
+  "peak_rss_mb": 280.0,
+  "runs": [
+   6.72,
+   7.22,
+   6.57
+  ],
+  "status": "ok"
+ },
+ {
+  "file": "qwen2.5-0.5b-model.safetensors",
+  "size_mb": 942.3,
+  "tool": "msscan-python",
+  "wall_s": 0.1,
+  "peak_rss_mb": 21.0,
+  "runs": [
+   0.29,
+   0.09,
+   0.1
+  ],
+  "status": "ok"
+ },
+ {
+  "file": "plain-data.pkl",
+  "size_mb": 31.3,
+  "tool": "msscan",
+  "wall_s": 0.58,
+  "peak_rss_mb": 238.6,
+  "runs": [
+   0.85,
+   0.57,
+   0.58
+  ],
+  "status": "ok"
+ },
+ {
+  "file": "plain-data.pkl",
+  "size_mb": 31.3,
+  "tool": "picklescan",
+  "wall_s": 23.68,
+  "peak_rss_mb": 687.8,
+  "runs": [
+   19.14,
+   23.68,
+   39.91
+  ],
+  "status": "ok"
+ },
+ {
+  "file": "plain-data.pkl",
+  "size_mb": 31.3,
+  "tool": "modelscan",
+  "wall_s": 27.06,
+  "peak_rss_mb": 579.1,
+  "runs": [
+   29.55,
+   25.08,
+   27.06
+  ],
+  "status": "ok"
+ },
+ {
+  "file": "plain-data.pkl",
+  "size_mb": 31.3,
+  "tool": "fickling",
+  "wall_s": 190.26,
+  "peak_rss_mb": 828.5,
+  "runs": [
+   190.26,
+   541.13,
+   157.38
+  ],
+  "status": "ok"
+ },
+ {
+  "file": "plain-data.pkl",
+  "size_mb": 31.3,
+  "tool": "msscan-python",
+  "wall_s": 0.3,
+  "peak_rss_mb": 258.1,
+  "runs": [
+   0.84,
+   0.3,
+   0.24
+  ],
+  "status": "ok"
+ }
+]

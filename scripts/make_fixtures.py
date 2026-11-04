@@ -6,6 +6,7 @@ does not exist; none of them is ever loaded by the tests. Run: python scripts/ma
 
 from __future__ import annotations
 
+import gzip
 import io
 import json
 import os
@@ -51,6 +52,37 @@ def safetensors(header: dict[str, object], data: bytes) -> bytes:
     return struct.pack("<Q", len(h)) + h + data
 
 
+def _s(v: str) -> bytes:
+    b = v.encode()
+    return b"\x8c" + bytes([len(b)]) + b
+
+
+def pb(field: int, data: bytes) -> bytes:
+    def varint(v: int) -> bytes:
+        out = bytearray()
+        while True:
+            out.append((v & 0x7F) | (0x80 if v > 0x7F else 0))
+            v >>= 7
+            if not v:
+                return bytes(out)
+
+    return varint(field << 3 | 2) + varint(len(data)) + data
+
+
+def onnx_traversal() -> bytes:
+    entry = pb(1, b"location") + pb(2, b"../../outside/weights.bin")
+    tensor = pb(8, b"W") + pb(13, entry) + b"\x70\x01"  # data_location = EXTERNAL
+    node = pb(1, b"x") + pb(1, b"W") + pb(2, b"y") + pb(4, b"MatMul")
+    graph = pb(1, node) + pb(5, tensor)
+    return b"\x08\x08" + pb(7, graph)
+
+
+def npy_object(payload: bytes) -> bytes:
+    header = "{'descr': '|O', 'fortran_order': False, 'shape': (1,), }"
+    header += " " * (-(10 + len(header) + 1) % 64) + "\n"
+    return b"\x93NUMPY\x01\x00" + struct.pack("<H", len(header)) + header.encode() + payload
+
+
 def main() -> None:
     OUT.mkdir(parents=True, exist_ok=True)
     getcwd = pickle.dumps(Reduce(os.getcwd), protocol=2)
@@ -63,6 +95,23 @@ def main() -> None:
         "clean.safetensors": safetensors(
             {"w": {"dtype": "F32", "shape": [2], "data_offsets": [0, 8]}}, b"\0" * 8
         ),
+        "malicious_dynamic_import.pkl": b"\x80\x04"
+        + _s("_codecs")
+        + _s("encode")
+        + b"\x93"
+        + _s("bf")
+        + _s("rot13")
+        + b"\x86R"
+        + _s("getcwd")
+        + b"\x93)R.",
+        "malicious_setstate.pkl": b"\x80\x02cargparse\nNamespace\n)R}"
+        + _s("__setstate__")
+        + b"cbuiltins\nprint\nsb"
+        + _s("inert")
+        + b"b.",
+        "malicious_gzip.pkl.gz": gzip.compress(getcwd, mtime=0),
+        "malicious_object_array.npy": npy_object(getcwd),
+        "unsafe_traversal.onnx": onnx_traversal(),
         "invalid_offsets.safetensors": safetensors(
             {"w": {"dtype": "F32", "shape": [4], "data_offsets": [0, 8]}}, b"\0" * 8
         ),

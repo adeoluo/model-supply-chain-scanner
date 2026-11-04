@@ -53,13 +53,15 @@ pub(crate) fn dispatch(ctx: &mut Ctx, data: &[u8], member: &str, depth: u8) -> S
             scan::scan_compressed(ctx, codec, data, member, depth)
         }
         Some("gguf") => {
-            let (f, _) = gguf::check(data, total, member);
+            let (f, info) = gguf::check(data, total, member);
             ctx.findings.extend(f);
+            ctx.stats.prefix_incomplete |= info.partial;
             "gguf".into()
         }
         Some("safetensors") => {
-            let (f, _) = safetensors::check(data, total, member);
+            let (f, info) = safetensors::check(data, total, member);
             ctx.findings.extend(f);
+            ctx.stats.prefix_incomplete |= info.partial;
             "safetensors".into()
         }
         Some("hdf5") => {

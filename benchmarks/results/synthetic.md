@@ -31,4 +31,4 @@ Versions: msscan 0.1.0 picklescan 1.0.5 modelscan 0.8.8 fickling 0.1.13
 | False positive rate (benign) | 78 | 0/78 = 0.000 (0.000 to 0.047) | 0/78 = 0.000 (0.000 to 0.047) | 0/78 = 0.000 (0.000 to 0.047) | 22/78 = 0.282 (0.194 to 0.390) | 0/78 = 0.000 (0.000 to 0.047) | 31/78 = 0.397 (0.296 to 0.508) | 5/78 = 0.064 (0.028 to 0.141) |
 
 | Files not scanned or with errors | | 0 | 0 | 10 | 10 | 90 | 93 | 93 |
-| Wall time (s, one process, includes imports) | | 0.2 | 0.2 | 0.4 | 0.4 | 0.6 | 4.2 | 4.2 |
+| Wall time (s, one process, includes imports) | | 0.2 | 0.2 | 0.2 | 0.2 | 0.4 | 2.0 | 2.0 |

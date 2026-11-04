@@ -6,6 +6,7 @@
 //! them with a string-aware brace matcher (ADR 0005).
 
 use crate::finding::{ids, Finding};
+use crate::pickle::policy::{self, Tier};
 use serde_json::Value;
 
 pub const HDF5_MAGIC: &[u8] = b"\x89HDF\r\n\x1a\n";
@@ -108,6 +109,7 @@ fn matching_brace(d: &[u8], start: usize) -> Option<usize> {
 struct Walk {
     lambdas: Vec<String>,
     modules: Vec<String>,
+    external: Vec<String>,
     custom: Vec<String>,
     tf_funcs: Vec<String>,
 }
@@ -145,8 +147,22 @@ fn walk(v: &Value, w: &mut Walk, depth: u32, in_lambda: bool) {
                         class,
                         "tuple" | "list" | "dict" | "set" | "float" | "int" | "str" | "bool"
                     );
-                if (!keras && !builtin_ok) || DANGEROUS_KERAS_NAMES.contains(&class) || module.contains("file_utils") {
-                    w.modules.push(format!("{module}.{class}"));
+                // Functions saved by name ({"module": "builtins", "class_name": "function"}) and
+                // objects from __main__ are looked up among Keras built-ins and the custom objects
+                // passed by the caller; the config cannot import code through them.
+                let by_name = (module == "builtins" && class == "function") || module == "__main__";
+                let full = format!("{module}.{class}");
+                if DANGEROUS_KERAS_NAMES.contains(&class)
+                    || module.contains("file_utils")
+                    || (module == "builtins" && !builtin_ok && !by_name)
+                    || (!keras && policy::classify(module, class) == Tier::Dangerous)
+                {
+                    w.modules.push(full);
+                } else if by_name {
+                    let fname = cfg.and_then(Value::as_str).unwrap_or(class);
+                    w.custom.push(format!("{module}.{fname}"));
+                } else if !keras && !builtin_ok {
+                    w.external.push(full);
                 }
             }
             if let Some(r) = m.get("registered_name").and_then(Value::as_str) {
@@ -206,6 +222,14 @@ pub fn check_configs(configs: &[Value], loc: &str) -> Vec<Finding> {
         out.push(Finding::new(
             ids::KERAS_UNSAFE_MODULE,
             format!("deserializes {}", short_list(&modules)),
+            loc,
+        ));
+    }
+    let external = dedup(w.external);
+    if !external.is_empty() {
+        out.push(Finding::new(
+            ids::KERAS_EXTERNAL_MODULE,
+            format!("needs code from {}", short_list(&external)),
             loc,
         ));
     }
@@ -272,6 +296,24 @@ pub(crate) mod tests {
                 && f[0].message.contains("io.write_file")
         );
         assert!(!f[0].message.contains("tuple"));
+    }
+
+    #[test]
+    fn functions_by_name_and_third_party_modules() {
+        let c = r#"{"module": "keras", "class_name": "Model", "config": {"layers": [{"module": "tornet.layers", "class_name": "CoordConv2D", "config": {}}], "loss": {"module": "builtins", "class_name": "function", "config": "ciou_loss", "registered_name": "function"}, "metrics": [{"module": "__main__", "class_name": "function", "config": "iou"}]}}"#;
+        let f = check_config_json(c.as_bytes(), "x");
+        let rules: Vec<_> = f.iter().map(|x| x.rule.as_str()).collect();
+        assert_eq!(rules, vec![ids::KERAS_EXTERNAL_MODULE, ids::KERAS_CUSTOM_OBJECT]);
+        assert!(f[0].message.contains("tornet.layers.CoordConv2D"));
+        assert!(f[1].message.contains("builtins.ciou_loss"));
+        for bad in [
+            r#"{"module": "os", "class_name": "function", "config": "system"}"#,
+            r#"{"module": "builtins", "class_name": "eval"}"#,
+            r#"{"module": "subprocess", "class_name": "call"}"#,
+        ] {
+            let f = check_config_json(bad.as_bytes(), "x");
+            assert_eq!(f[0].rule, ids::KERAS_UNSAFE_MODULE, "{bad}");
+        }
     }
 
     #[test]
