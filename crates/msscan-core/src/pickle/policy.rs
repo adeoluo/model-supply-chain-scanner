@@ -432,6 +432,15 @@ pub fn classify(module: &str, name: &str) -> Tier {
         if first.starts_with("__") || name.split('.').any(|p| p.starts_with("__") && p.ends_with("__")) {
             return Tier::Dangerous;
         }
+        // Intermediate attributes that are private or name a dangerous module ("argparse._os",
+        // "shutil.os") reach other modules through an innocent-looking import.
+        let parts: Vec<&str> = name.split('.').collect();
+        if parts[..parts.len() - 1]
+            .iter()
+            .any(|p| p.starts_with('_') || DANGEROUS_MODULES.iter().any(|m| m == p) || *p == "builtins")
+        {
+            return Tier::Dangerous;
+        }
         let full = format!("{module}.{name}");
         let (m2, n2) = full.rsplit_once('.').unwrap_or((module, name));
         if classify(m2, n2) == Tier::Dangerous {
@@ -502,6 +511,9 @@ mod tests {
         );
         assert_eq!(classify("torch", "serialization.load"), Tier::Dangerous);
         assert_eq!(classify("torch", "nn.Linear"), Tier::Library);
+        assert_eq!(classify("argparse", "_os.getcwd"), Tier::Dangerous);
+        assert_eq!(classify("shutil", "os.getcwd"), Tier::Dangerous);
+        assert_eq!(classify("mypkg", "Outer.Inner"), Tier::Unknown);
     }
 
     #[test]
