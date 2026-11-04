@@ -54,6 +54,29 @@ jobs:
           name: coverage
           path: coverage.xml
 
+  rust:
+    name: rust core (fmt, clippy, tests, coverage)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          components: clippy, rustfmt, llvm-tools-preview
+
+      - name: Install cargo-llvm-cov
+        uses: taiki-e/install-action@cargo-llvm-cov
+
+      - name: Format
+        run: cargo fmt --all --check
+
+      - name: Clippy
+        run: cargo clippy --workspace --all-targets -- -D warnings
+
+      - name: Tests with the coverage gate
+        run: cargo llvm-cov --workspace --exclude msscan-py --fail-under-lines 85 --summary-only
+
   build:
     name: build (package + image)
     runs-on: ubuntu-latest
