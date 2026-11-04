@@ -219,7 +219,15 @@ const DANGEROUS_MODULES: &[&str] = &[
     "torch.package",
     "torch._dynamo",
     "torch._inductor",
-    "torch.distributed",
+    // torch.distributed itself (process groups, send and recv) and the parts that run commands,
+    // remote calls or file I/O; tensor, device mesh and placement classes stay library code.
+    "torch.distributed.rpc",
+    "torch.distributed.elastic",
+    "torch.distributed.launch",
+    "torch.distributed.launcher",
+    "torch.distributed.run",
+    "torch.distributed.checkpoint",
+    "torch.distributed.distributed_c10d",
     "torch.ops",
     "torch._ops",
     "pandas.io.pickle",
@@ -422,7 +430,7 @@ pub fn classify(module: &str, name: &str) -> Tier {
     {
         return Tier::Dangerous;
     }
-    if DANGEROUS_MODULES.iter().any(|m| in_module(module, m)) {
+    if module == "torch.distributed" || DANGEROUS_MODULES.iter().any(|m| in_module(module, m)) {
         return Tier::Dangerous;
     }
     // Attribute paths ("os.system" as a name with protocol 4 dotted lookup) are dangerous when any
@@ -500,6 +508,10 @@ mod tests {
         assert_eq!(classify("torch.jit._pickle", "build_intlist"), Tier::Safe);
         assert_eq!(classify("torch.jit", "load"), Tier::Dangerous);
         assert_eq!(classify("__torch__.torch.nn.modules.linear", "Linear"), Tier::Library);
+        assert_eq!(classify("torch.distributed", "init_process_group"), Tier::Dangerous);
+        assert_eq!(classify("torch.distributed.rpc", "rpc_sync"), Tier::Dangerous);
+        assert_eq!(classify("torch.distributed.tensor", "DTensor"), Tier::Library);
+        assert_eq!(classify("torch.distributed.device_mesh", "DeviceMesh"), Tier::Library);
     }
 
     #[test]
