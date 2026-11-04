@@ -25,7 +25,10 @@ The project uses two corpora. Neither is committed: both are rebuilt by scripts 
 
 ## 2. Hugging Face Hub corpus (`benchmarks/hf/collect.py`)
 
-See `docs/EVALUATION_REPORT.md` for the final counts. Repositories come from public listings
+Final sample: 7,607 files from 2,888 public repositories (2.5 GB stored): 2,510 JSON configs,
+2,462 safetensors headers, 1,534 pickle-family files, 471 Keras archives, 391 GGUF headers and
+239 ONNX, HDF5 and SavedModel files. Labels (`benchmarks/hf/review.py`): 17 payload, 27
+security-test, 342 code-by-design, 14 nonstandard, 7,207 benign. Repositories come from public listings
 (most downloaded, most recently modified, most liked, and filters for gguf, keras, onnx,
 sklearn, joblib and tf), skipping gated and private repositories. At most three files of each
 kind are taken per repository, plus top-level `config.json` and `tokenizer_config.json`.
@@ -35,5 +38,5 @@ kind are taken per repository, plus top-level `config.json` and `tokenizer_confi
 - `.keras`: only the JSON members. safetensors: only the header. GGUF: only the header, scanned
   in memory and not stored. Other formats: whole files up to 20 MB.
 - **Privacy:** repository names stay in a private directory; published rows carry salted
-  pseudonyms and only aggregate rates are reported (ADR 0006). No repository owner was contacted.
+  pseudonyms and sizes rounded up to a power of two, and only aggregate rates are reported (ADR 0006). No repository owner was contacted.
 - **Licenses:** files are read for security analysis and not redistributed.
