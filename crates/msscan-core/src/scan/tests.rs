@@ -179,3 +179,105 @@ fn report_serializes() {
     assert_eq!(j["imports"][0]["tier"], "dangerous");
     assert!(j.get("sha256").is_none());
 }
+
+#[test]
+fn every_format_is_dispatched() {
+    use crate::gguf::tests::G;
+    let g = G::new()
+        .kv_str(
+            "tokenizer.chat_template",
+            "{{ cycler.__init__.__globals__.os.getcwd() }}",
+        )
+        .build(0);
+    let r = scan(&g, "m.gguf");
+    assert_eq!((r.format.as_str(), r.verdict), ("gguf", Verdict::Malicious));
+
+    let st = crate::safetensors::tests::st(r#"{"a":{"dtype":"U8","shape":[4],"data_offsets":[0,4]}}"#, 4);
+    assert_eq!(scan(&st, "m.safetensors").verdict, Verdict::Clean);
+    // headers-only: the real file is bigger than the tensors claim
+    let o = Options {
+        declared_size: Some(st.len() as u64 + 10),
+        ..Options::default()
+    };
+    let r = scan_bytes(&st[..st.len() - 4], "m.safetensors", &o);
+    assert!(rules(&r).contains(&ids::SAFETENSORS_OFFSETS));
+
+    let sm = crate::savedmodel::tests::saved_model(&["ReadFile"], &["EagerPyFunc"]);
+    let r = scan(&sm, "saved_model.pb");
+    assert_eq!((r.format.as_str(), r.verdict), ("savedmodel", Verdict::Malicious));
+    let r = scan(&sm, "other.bin");
+    assert_eq!(r.format, "savedmodel");
+
+    let ox = crate::onnx::tests::model(&["../x.bin"], &[""]);
+    let r = scan(&ox, "model.onnx");
+    assert_eq!((r.format.as_str(), r.verdict), ("onnx", Verdict::Unsafe));
+    assert_eq!(scan(&ox, "renamed.bin").format, "onnx");
+    assert!(rules(&scan(b"\x08\x07garbage", "bad.onnx")).contains(&ids::ONNX_MALFORMED));
+
+    let k = build(&[
+        ("config.json", crate::keras::tests::LAMBDA_K3.as_bytes(), true),
+        ("metadata.json", b"{}", false),
+    ]);
+    let r = scan(&k, "m.keras");
+    assert_eq!((r.format.as_str(), r.verdict), ("keras", Verdict::Unsafe));
+
+    let mut h5 = crate::keras::HDF5_MAGIC.to_vec();
+    h5.extend_from_slice(crate::keras::tests::LAMBDA_K2.as_bytes());
+    let r = scan(&h5, "m.h5");
+    assert_eq!((r.format.as_str(), r.verdict), ("keras-h5", Verdict::Unsafe));
+    let r = scan(crate::keras::tests::LAMBDA_K2.as_bytes(), "keras_metadata.pb");
+    assert_eq!(r.format, "keras-metadata");
+    assert_eq!(r.verdict, Verdict::Unsafe);
+
+    let cfg = br#"{"auto_map": {"AutoModel": "m.M"}}"#;
+    let r = scan(cfg, "config.json");
+    assert_eq!((r.format.as_str(), r.verdict), ("hf-config", Verdict::Clean));
+    assert!(rules(&r).contains(&ids::HF_REMOTE_CODE));
+    assert_eq!(scan(b"{\"a\": 1}", "x.json").format, "json");
+    assert!(rules(&scan(b"\x80\x02N.", "x.gguf")).contains(&ids::FORMAT_MISMATCH));
+}
+
+mod fuzz {
+    use super::*;
+    use proptest::prelude::*;
+
+    fn prefixes() -> Vec<Vec<u8>> {
+        vec![
+            b"GGUF\x03\x00\x00\x00".to_vec(),
+            b"\x20\x00\x00\x00\x00\x00\x00\x00{\"a\":".to_vec(),
+            b"PK\x03\x04".to_vec(),
+            b"\x93NUMPY\x01\x00".to_vec(),
+            crate::keras::HDF5_MAGIC.to_vec(),
+            b"\x08\x08\x3a".to_vec(),
+            b"\x08\x01\x12".to_vec(),
+            b"\x1f\x8b\x08".to_vec(),
+            b"\x80\x04\x95".to_vec(),
+            b"{\"class_name\": ".to_vec(),
+        ]
+    }
+
+    proptest! {
+        #![proptest_config(ProptestConfig::with_cases(400))]
+        #[test]
+        fn no_format_panics(which in 0usize..10, tail in proptest::collection::vec(any::<u8>(), 0..300),
+                            names in prop::sample::select(vec!["a.bin", "saved_model.pb", "m.onnx", "keras_metadata.pb", "config.json"])) {
+            let mut d = prefixes()[which].clone();
+            d.extend(tail);
+            let r = scan_bytes(&d, names, &Options::default());
+            prop_assert!(r.risk_score <= 100);
+        }
+
+        #[test]
+        fn mutated_valid_files_do_not_panic(idx in 0usize..4000, byte in any::<u8>(), which in 0usize..4) {
+            let mut d = match which {
+                0 => crate::gguf::tests::G::new().kv_str("tokenizer.chat_template", "{{ x }}").tensor("w", &[4], 0, 0).build(16),
+                1 => crate::onnx::tests::model(&["a.bin"], &["", "x"]),
+                2 => crate::savedmodel::tests::saved_model(&["ReadFile"], &["PyFunc"]),
+                _ => build(&[("a/data.pkl", GETCWD, true), ("a/version", b"3", false)]),
+            };
+            let i = idx % d.len();
+            d[i] = byte;
+            let _ = scan_bytes(&d, "f", &Options::default());
+        }
+    }
+}
