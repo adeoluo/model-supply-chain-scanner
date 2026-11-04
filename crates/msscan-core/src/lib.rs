@@ -7,8 +7,16 @@
 pub mod compress;
 pub mod finding;
 pub mod formats;
+pub mod gguf;
+pub mod hfjson;
+pub mod jinja;
+pub mod keras;
 pub mod numpy;
+pub mod onnx;
 pub mod pickle;
+pub mod protobuf;
+pub mod safetensors;
+pub mod savedmodel;
 pub mod scan;
 pub mod zip;
 

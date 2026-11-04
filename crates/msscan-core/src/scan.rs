@@ -158,10 +158,12 @@ fn expected_format(name: &str) -> Option<&'static str> {
     let ext = lower.rsplit('.').next().unwrap_or("");
     Some(match ext {
         "safetensors" => "safetensors",
+        "pb" => "savedmodel",
         "gguf" => "gguf",
         "npy" => "numpy",
         "npz" => "zip",
         "h5" | "hdf5" => "hdf5",
+        "pkl" | "pickle" => "pickle",
         "keras" => "zip",
         "onnx" => "onnx",
         "json" => "json",
@@ -173,6 +175,8 @@ fn family(format: &str) -> &str {
     match format {
         "pytorch" | "npz" | "keras" | "zip" | "torchscript" => "zip",
         "numpy" => "numpy",
+        "keras-h5" | "hdf5" => "hdf5",
+        "keras-metadata" => "savedmodel",
         f if f.starts_with("pickle") || f == "joblib" || f == "pytorch-legacy" => "pickle",
         f => f,
     }
@@ -193,7 +197,8 @@ pub(crate) fn scan_buffer(ctx: &mut Ctx, data: &[u8], member: &str, depth: u8) -
     if depth == 0 {
         if let Some(want) = expected_format(member) {
             let got = family(&format);
-            if want != got && format != "unknown" && !(want == "json" && got == "hf-config") {
+            let compressed_pickle = want == "pickle" && format.contains('+');
+            if want != got && format != "unknown" && !(want == "json" && got == "hf-config") && !compressed_pickle {
                 ctx.findings.push(Finding::new(
                     ids::FORMAT_MISMATCH,
                     format!("the name suggests {want} but the content is {format}"),
@@ -340,6 +345,11 @@ pub(crate) fn scan_zip(ctx: &mut Ctx, data: &[u8], member: &str, depth: u8) -> S
                 format!("entry {:?} has a compression ratio above 1000", e.name),
                 &sub,
             ));
+        }
+        if format == "keras" && lname == "config.json" {
+            ctx.stats.members_scanned += 1;
+            ctx.findings.extend(crate::keras::check_config_json(&body, &sub));
+            continue;
         }
         if lname.ends_with(".pkl") || lname.ends_with(".pickle") {
             ctx.stats.members_scanned += 1;
