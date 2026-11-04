@@ -103,6 +103,16 @@ jobs:
           ./target/release/msscan scan -f sarif --fail-on none -o fixtures.sarif tests/fixtures
           test "$(jq '.runs[0].results | length' fixtures.sarif)" -gt 0
 
+      - name: Run the GitHub Action on the fixtures
+        uses: ./
+        with:
+          path: tests/fixtures
+          output: action.sarif
+          fail-on: none
+
+      - name: Check the Action's SARIF
+        run: test "$(jq '.runs[0].results | length' action.sarif)" -gt 0
+
       - name: Build and probe the Docker image
         run: |
           docker build -t msscan:ci .
