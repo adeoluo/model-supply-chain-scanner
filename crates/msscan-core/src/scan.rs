@@ -5,7 +5,7 @@ use crate::finding::{ids, Finding, Severity};
 use crate::numpy;
 use crate::pickle::{self, Limits, Tier};
 use crate::zip;
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
 use std::path::{Path, PathBuf};
 use std::time::Instant;
@@ -37,7 +37,7 @@ impl Default for Options {
 }
 
 /// A global imported by a pickle somewhere in the file.
-#[derive(Debug, Clone, Serialize, PartialEq)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct ImportRecord {
     pub module: String,
     pub name: String,
@@ -49,7 +49,7 @@ pub struct ImportRecord {
 }
 
 /// Counters describing what was analyzed.
-#[derive(Debug, Clone, Default, Serialize, PartialEq)]
+#[derive(Debug, Clone, Default, Serialize, Deserialize, PartialEq)]
 pub struct Stats {
     pub pickles: u64,
     pub opcodes: u64,
@@ -59,12 +59,12 @@ pub struct Stats {
 }
 
 /// The scan result for one file.
-#[derive(Debug, Clone, Serialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Report {
     pub path: String,
     pub format: String,
     pub size: u64,
-    #[serde(skip_serializing_if = "Option::is_none")]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub sha256: Option<String>,
     pub verdict: Verdict,
     pub risk_score: u32,
@@ -73,11 +73,11 @@ pub struct Report {
     pub imports: Vec<ImportRecord>,
     pub stats: Stats,
     pub elapsed_us: u64,
-    #[serde(skip_serializing_if = "Option::is_none")]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub error: Option<String>,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, PartialOrd, Ord)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, PartialOrd, Ord)]
 #[serde(rename_all = "lowercase")]
 pub enum Verdict {
     Clean,
