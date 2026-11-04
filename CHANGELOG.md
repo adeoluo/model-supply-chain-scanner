@@ -4,7 +4,7 @@ All notable changes to this project are documented here. The file is generated
 from Conventional Commits by [git-cliff](https://git-cliff.org) when a release is cut
 with `make cut-release`.
 
-## Unreleased
+## [0.1.0] 2026-11-04
 
 ### Features
 
@@ -17,3 +17,4 @@ with `make cut-release`.
 ### Maintenance
 
 - Scaffold project
+- Release tooling, changelog, AGENTS.md and llms.txt (#6)
