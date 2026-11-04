@@ -1,0 +1,32 @@
+# Model Supply Chain Scanner
+
+> A static scanner that finds code execution, file access and malformed structure in machine learning model files before they are loaded, without importing or running anything from them.
+
+Languages: Python, Rust. License: MIT. Source: https://github.com/adeoluo/model-supply-chain-scanner
+
+## Docs
+
+- [README](https://github.com/adeoluo/model-supply-chain-scanner/blob/main/README.md): motivation, architecture, results, quickstart, usage, design decisions, testing, responsible ai, limitations, roadmap
+- [AGENTS.md](https://github.com/adeoluo/model-supply-chain-scanner/blob/main/AGENTS.md): layout, commands and conventions for changing the code
+- [Architecture diagram](https://github.com/adeoluo/model-supply-chain-scanner/blob/main/docs/architecture/architecture.mmd): Mermaid source of the component diagram
+- [Architecture](https://github.com/adeoluo/model-supply-chain-scanner/blob/main/docs/ARCHITECTURE.md)
+- [Data Card](https://github.com/adeoluo/model-supply-chain-scanner/blob/main/docs/DATA_CARD.md)
+- [Definition of Done](https://github.com/adeoluo/model-supply-chain-scanner/blob/main/docs/DEFINITION_OF_DONE.md)
+- [Evaluation Report: Model Supply Chain Scanner](https://github.com/adeoluo/model-supply-chain-scanner/blob/main/docs/EVALUATION_REPORT.md)
+- [Rules](https://github.com/adeoluo/model-supply-chain-scanner/blob/main/docs/RULES.md)
+- [Threat Model: Model Supply Chain Scanner](https://github.com/adeoluo/model-supply-chain-scanner/blob/main/docs/THREAT_MODEL.md)
+- [ADR-0001: Record architecture decisions](https://github.com/adeoluo/model-supply-chain-scanner/blob/main/docs/adr/0001-record-architecture-decisions.md)
+- [ADR-0002: One Rust core for the CLI, the service and the Python package](https://github.com/adeoluo/model-supply-chain-scanner/blob/main/docs/adr/0002-rust-core-with-python-bindings.md)
+- [ADR-0003: A symbolic pickle virtual machine with tiered globals](https://github.com/adeoluo/model-supply-chain-scanner/blob/main/docs/adr/0003-symbolic-pickle-vm.md)
+- [ADR-0004: Severities, verdicts and a noisy-or risk score](https://github.com/adeoluo/model-supply-chain-scanner/blob/main/docs/adr/0004-risk-scoring-and-verdicts.md)
+- [ADR-0005: Reading Keras configs from raw bytes instead of parsing HDF5](https://github.com/adeoluo/model-supply-chain-scanner/blob/main/docs/adr/0005-configs-from-raw-bytes.md)
+- [ADR-0006: A Hub corpus from headers and stubs, published without names](https://github.com/adeoluo/model-supply-chain-scanner/blob/main/docs/adr/0006-hub-corpus-headers-only.md)
+- [ADR-NNNN: <short title>](https://github.com/adeoluo/model-supply-chain-scanner/blob/main/docs/adr/template.md)
+- [Changelog](https://github.com/adeoluo/model-supply-chain-scanner/blob/main/CHANGELOG.md): release history
+
+## Source
+
+- [src/msscan/__init__.py](https://github.com/adeoluo/model-supply-chain-scanner/blob/main/src/msscan/__init__.py): Scan machine learning model files for code execution and unsafe content before loading them.
+- [src/msscan/api.py](https://github.com/adeoluo/model-supply-chain-scanner/blob/main/src/msscan/api.py): Typed wrappers around the Rust core.
+- [src/msscan/cli.py](https://github.com/adeoluo/model-supply-chain-scanner/blob/main/src/msscan/cli.py): Command line: ``python -m msscan scan|rules|serve``.
+- [src/msscan/reference.py](https://github.com/adeoluo/model-supply-chain-scanner/blob/main/src/msscan/reference.py): A readable reference for the pickle import and call analysis, used only by parity tests.

@@ -1,4 +1,4 @@
-.PHONY: help setup build develop fixtures lint format type test rust-test coverage all corpus validate compare hf-list hf-fetch hf-compare speed rules-doc diagram docker demo clean
+.PHONY: help setup build develop fixtures lint format type test rust-test coverage all corpus validate compare hf-list hf-fetch hf-compare speed rules-doc diagram docker demo clean changelog cut-release
 
 LLVM ?= /opt/homebrew/opt/llvm/bin
 DATA ?= ../.bench-data/model-supply-chain-scanner
@@ -88,3 +88,9 @@ demo: build ## Record the demo GIFs with vhs
 clean: ## Remove build artifacts
 	rm -rf target dist .pytest_cache .mypy_cache .ruff_cache coverage.xml
 	find . -type d -name __pycache__ -not -path './.venv/*' -exec rm -rf {} +
+
+changelog: ## Regenerate CHANGELOG.md from Conventional Commits (git-cliff)
+	git cliff --output CHANGELOG.md && perl -0pi -e 's/\n+\z/\n/' CHANGELOG.md
+
+cut-release: ## Cut a release locally: version bump, changelog, tag, GitHub release (RELEASE_VERSION=vX.Y.Z optional)
+	scripts/release.sh $(RELEASE_VERSION)
