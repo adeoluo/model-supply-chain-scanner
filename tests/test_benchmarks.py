@@ -41,3 +41,47 @@ def test_summary_tables() -> None:
     text = summarize(results)
     assert "| malicious: pickle / hard | 1 | 0/1 | 0/1 | 1/1 | 0/1 |" in text
     assert "False positive rate (benign) | 1 | 0/1 = 0.000" in text
+
+
+def test_hub_review_labels() -> None:
+    from benchmarks.hf.review import label, table
+
+    def priv(repo: str, rules: list[str], imports: list[tuple[str, str, str]]) -> dict[str, object]:
+        return {
+            "repo": repo,
+            "findings": [{"rule": r} for r in rules],
+            "imports": [{"module": m, "name": n, "tier": t} for m, n, t in imports],
+        }
+
+    cases = {
+        "payload": priv("org/weights", ["MS101"], [("posix", "system", "dangerous")]),
+        "security-test": priv(
+            "someone/scanner-bypass-poc", ["MS111"], [("builtins", "print", "library")]
+        ),
+        "code-by-design": priv("org/keras-model", ["MS505"], []),
+        "nonstandard": priv("org/wan-gguf", ["MS803"], []),
+        "benign": priv("org/bert", ["MS111"], [("sklearn.svm", "SVC", "library")]),
+    }
+    for expected, p in cases.items():
+        assert label({}, p)[0] == expected, expected
+    # "Vulnerability" and "pocket" are not security-test words
+    assert label({}, priv("org/Drought_Vulnerability", [], []))[0] == "benign"
+    assert label({}, priv("org/POCKET-26B", [], []))[0] == "benign"
+    assert (
+        label({}, priv("org/dtensor", [], [("torch.distributed.tensor", "DTensor", "library")]))[0]
+        == "benign"
+    )
+
+    rows = [
+        {
+            "id": "a",
+            "kind": "pickle",
+            "msscan": {"flags": {"default": True}},
+            "picklescan": {"flags": {}},
+        },
+        {"id": "b", "kind": "gguf", "msscan": {"flags": {"default": False}}},
+    ]
+    text = table(rows, {"a": "payload", "b": "benign"}, None)
+    assert "| payload | 1 | 1/1 | 0/1 | 0/1 |" in text
+    assert "| benign | 1 | 0/1 = 0.000" in text
+    assert "not run" in text

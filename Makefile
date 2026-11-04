@@ -57,6 +57,21 @@ validate: ## Load every corpus file with its real loader in a subprocess (benchm
 compare: ## msscan vs picklescan, modelscan and fickling on the synthetic corpus
 	$(BENCH) benchmarks/compare.py --corpus $(DATA)/synthetic --out benchmarks/results/synthetic
 
+hf-list: ## List Hugging Face Hub repositories and files (public endpoints, no token)
+	$(BENCH) benchmarks/hf/collect.py list --data $(DATA)/hf
+
+hf-fetch: ## Fetch headers and small files from the Hub (resumable, 2.5 GB budget)
+	$(BENCH) benchmarks/hf/collect.py fetch --data $(DATA)/hf
+
+hf-compare: ## Scan the Hub corpus with all four tools (benchmarks/results/hf_corpus.json)
+	$(BENCH) benchmarks/hf/scan.py --data $(DATA)/hf --out benchmarks/results/hf_corpus
+
+hf-review: ## Label flagged Hub files and tabulate flag rates (benchmarks/results/hf_review.*)
+	$(BENCH) benchmarks/hf/review.py --data $(DATA)/hf --out benchmarks/results/hf_review
+
+speed: build ## Wall time and peak memory on large real checkpoints (benchmarks/results/speed.json)
+	$(BENCH) benchmarks/speed.py --data $(DATA)/speed --msscan target/release/msscan
+
 rules-doc: build ## Regenerate docs/RULES.md
 	./target/release/msscan rules --format markdown > docs/RULES.md
 
