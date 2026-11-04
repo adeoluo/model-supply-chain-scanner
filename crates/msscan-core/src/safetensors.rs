@@ -51,7 +51,7 @@ pub fn header_len(d: &[u8]) -> Option<u64> {
 }
 
 pub fn is_safetensors(d: &[u8]) -> bool {
-    header_len(d).is_some_and(|n| (2..=MAX_HEADER).contains(&n))
+    header_len(d).is_some_and(|n| n >= 2)
 }
 
 #[derive(Debug, Default)]

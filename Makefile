@@ -1,4 +1,4 @@
-.PHONY: help setup build develop fixtures lint format type test rust-test coverage all bench corpus validate compare hf-corpus hf-scan speed rules-doc diagram docker demo clean
+.PHONY: help setup build develop fixtures lint format type test rust-test coverage all corpus validate compare hf-list hf-fetch hf-compare speed rules-doc diagram docker demo clean
 
 LLVM ?= /opt/homebrew/opt/llvm/bin
 DATA ?= ../.bench-data/model-supply-chain-scanner
@@ -22,14 +22,14 @@ fixtures: ## Regenerate tests/fixtures
 
 format: ## Format Rust and Python
 	cargo fmt --all
-	uv run ruff format src tests scripts
-	uv run ruff check --fix src tests scripts
+	uv run ruff format src tests scripts benchmarks
+	uv run ruff check --fix src tests scripts benchmarks
 
 lint: ## Format checks, clippy and ruff
 	cargo fmt --all --check
 	cargo clippy --workspace --all-targets -- -D warnings
-	uv run ruff format --check src tests scripts
-	uv run ruff check src tests scripts
+	uv run ruff format --check src tests scripts benchmarks
+	uv run ruff check src tests scripts benchmarks
 
 type: ## mypy
 	uv run mypy src
@@ -45,6 +45,17 @@ coverage: ## Tests with the coverage gates used in CI (Rust 85% lines, Python 80
 	uv run pytest --cov=src --cov-report=term-missing --cov-fail-under=80
 
 all: lint type coverage ## Full local gate (mirror of continuous integration)
+
+BENCH = uv run --project benchmarks python
+
+corpus: ## Generate the inert synthetic corpus (malicious techniques and benign files)
+	rm -rf $(DATA)/synthetic && $(BENCH) benchmarks/corpus/generate.py --out $(DATA)/synthetic
+
+validate: ## Load every corpus file with its real loader in a subprocess (benchmarks/results/validation.json)
+	$(BENCH) benchmarks/corpus/validate.py --corpus $(DATA)/synthetic --out benchmarks/results/validation.json
+
+compare: ## msscan vs picklescan, modelscan and fickling on the synthetic corpus
+	$(BENCH) benchmarks/compare.py --corpus $(DATA)/synthetic --out benchmarks/results/synthetic
 
 rules-doc: build ## Regenerate docs/RULES.md
 	./target/release/msscan rules --format markdown > docs/RULES.md

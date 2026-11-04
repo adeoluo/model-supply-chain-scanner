@@ -296,9 +296,24 @@ pub(crate) fn scan_zip(ctx: &mut Ctx, data: &[u8], member: &str, depth: u8) -> S
     }
     let size_limit = ctx.opts.max_decompressed;
     for e in &a.entries {
-        if e.is_dir() || e.encrypted() {
+        if e.is_dir() {
             continue;
         }
+        // An "encrypted" stored entry that is really plaintext is still read by loaders that
+        // ignore the flag (PyTorch does), so scan it when its bytes parse.
+        let plain;
+        let e = if e.encrypted() {
+            if e.method != 0 {
+                continue;
+            }
+            plain = zip::Entry {
+                flags: e.flags & !1,
+                ..e.clone()
+            };
+            &plain
+        } else {
+            e
+        };
         let sub = format!("{member}/{}", e.name);
         let lname = e.name.to_ascii_lowercase();
         // PyTorch tensor storages are raw numbers: never interpret them as code.

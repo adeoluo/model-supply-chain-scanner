@@ -99,6 +99,12 @@ pub(crate) fn dispatch(ctx: &mut Ctx, data: &[u8], member: &str, depth: u8) -> S
             fmt.into()
         }
         _ if pickle::is_pickle(data) => scan::scan_pickle(ctx, data, member),
+        // A file named .safetensors that does not even look like one: report why.
+        _ if base_name(member).ends_with(".safetensors") => {
+            let (f, _) = safetensors::check(data, total, member);
+            ctx.findings.extend(f);
+            "safetensors".into()
+        }
         _ => {
             ctx.findings
                 .push(Finding::new(ids::FORMAT_UNKNOWN, "format not recognized", member));
