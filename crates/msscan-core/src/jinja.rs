@@ -114,7 +114,14 @@ pub fn check(template: &str, key: &str, loc: &str) -> Vec<Finding> {
         critical.dedup();
         out.push(Finding::new(
             ids::GGUF_TEMPLATE_INJECTION,
-            format!("{key} reaches {}", critical.join(", ")),
+            format!(
+                "{key} reaches {}",
+                critical
+                    .iter()
+                    .map(|c| c.trim_end_matches(['.', '(']))
+                    .collect::<Vec<_>>()
+                    .join(", ")
+            ),
             loc,
         ));
     } else if !suspicious.is_empty() {

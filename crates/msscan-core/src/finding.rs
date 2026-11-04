@@ -170,14 +170,17 @@ rules! {
         "A Keras model contains a Lambda layer with serialized Python bytecode, which runs when the model is loaded or called (Keras 3 blocks it unless safe_mode=False; Keras 2 HDF5 loading does not).",
         "Rebuild the layer in code and load weights only.";
     KERAS_UNSAFE_MODULE = "MS502", "keras-unsafe-module", High, "CWE-470",
-        "A Keras config deserializes a class or function from a module outside Keras, which lets the config import arbitrary callables.",
+        "A Keras config deserializes a class or function from a module that runs code or reaches the system (os, subprocess, builtins and the pickle denylist) or a Keras file utility.",
         "Check every module named in the config; register trusted custom objects explicitly.";
     KERAS_CUSTOM_OBJECT = "MS503", "keras-custom-object", Low, "CWE-470",
-        "A Keras config refers to a registered custom object that must be supplied by code at load time.",
+        "A Keras config refers to a registered custom object or a function by name (module builtins or __main__) that Keras resolves only from objects supplied by code at load time.",
         "Make sure the custom object comes from trusted code.";
     KERAS_MALFORMED = "MS504", "keras-malformed", Medium, "CWE-20",
         "The Keras model configuration is missing or is not valid JSON.",
         "Re-export the model.";
+    KERAS_EXTERNAL_MODULE = "MS505", "keras-external-module", Medium, "CWE-470",
+        "A Keras config names a class or function from a third-party module, so loading needs code that is not in the file (older Keras imports the module named in the config).",
+        "Install the package from a trusted source or register the objects explicitly.";
     TF_FILE_OP = "MS601", "tf-file-io-op", High, "CWE-73",
         "A TensorFlow graph contains an op that reads, writes or lists files (ReadFile, WriteFile, MatchingFiles and similar).",
         "Inspect the graph; serving a model should not need file access.";
