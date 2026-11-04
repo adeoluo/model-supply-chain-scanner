@@ -39,10 +39,10 @@ jobs:
         run: uv sync --python ${{ matrix.python-version }}
 
       - name: Format check (ruff)
-        run: uv run ruff format --check src tests scripts
+        run: uv run ruff format --check src tests scripts benchmarks
 
       - name: Lint (ruff)
-        run: uv run ruff check src tests scripts
+        run: uv run ruff check src tests scripts benchmarks
 
       - name: Type check (mypy)
         run: uv run mypy src

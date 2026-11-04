@@ -58,6 +58,19 @@ fn zip_header_mismatch_with_hidden_pickle() {
 }
 
 #[test]
+fn encrypted_flag_on_a_plaintext_pickle_is_still_scanned() {
+    let mut z = build(&[("archive/data.pkl", GETCWD, false)]);
+    for sig in [&b"PK\x01\x02"[..], &b"PK\x03\x04"[..]] {
+        let at = z.windows(4).position(|w| w == sig).unwrap();
+        let off = if sig == b"PK\x01\x02" { 8 } else { 6 };
+        z[at + off] |= 1;
+    }
+    let r = scan(&z, "x.pt");
+    assert!(rules(&r).contains(&ids::ARCHIVE_ENCRYPTED));
+    assert_eq!(r.verdict, Verdict::Malicious);
+}
+
+#[test]
 fn pickle_inside_unusual_member_name_is_found() {
     let z = build(&[("weights.txt", GETCWD, false), ("notes.md", b"hello", false)]);
     let r = scan(&z, "bundle.zip");
@@ -235,6 +248,7 @@ fn every_format_is_dispatched() {
     assert!(rules(&r).contains(&ids::HF_REMOTE_CODE));
     assert_eq!(scan(b"{\"a\": 1}", "x.json").format, "json");
     assert!(rules(&scan(b"\x80\x02N.", "x.gguf")).contains(&ids::FORMAT_MISMATCH));
+    assert!(rules(&scan(b"garbage!", "x.safetensors")).contains(&ids::SAFETENSORS_HEADER));
 }
 
 mod fuzz {
