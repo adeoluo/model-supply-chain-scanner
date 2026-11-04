@@ -67,6 +67,7 @@ def test_hub_review_labels() -> None:
     # "Vulnerability" and "pocket" are not security-test words
     assert label({}, priv("org/Drought_Vulnerability", [], []))[0] == "benign"
     assert label({}, priv("org/POCKET-26B", [], []))[0] == "benign"
+    assert label({}, priv("someone/MaliciousModel", [], []))[0] == "security-test"
     assert (
         label({}, priv("org/dtensor", [], [("torch.distributed.tensor", "DTensor", "library")]))[0]
         == "benign"

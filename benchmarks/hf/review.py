@@ -40,7 +40,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 from benchmarks.compare import wilson
 
 SECURITY_TEST = re.compile(
-    r"(^|[^a-z])(poc|malicious|exploit|payloads?|bypass|huntr|scanme|test-models)([^a-z]|$)", re.I
+    r"malicious|exploit|payload|bypass|huntr|scanme|test-models|(^|[^a-z])poc([^a-z]|$)", re.I
 )
 EXEC_MODULES = {
     "os",

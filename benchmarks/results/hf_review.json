@@ -1,17 +1,17 @@
 {
  "labels": {
-  "benign": 7209,
-  "code-by-design": 343,
+  "benign": 7207,
+  "code-by-design": 342,
   "nonstandard": 14,
-  "security-test": 24,
+  "security-test": 27,
   "payload": 17
  },
  "by_kind": {
   "full": {
-   "benign": 231,
-   "security-test": 4,
+   "benign": 230,
+   "security-test": 6,
    "payload": 2,
-   "code-by-design": 2
+   "code-by-design": 1
   },
   "gguf": {
    "benign": 378,
@@ -24,9 +24,9 @@
    "code-by-design": 159
   },
   "keras": {
-   "benign": 361,
+   "benign": 360,
    "code-by-design": 97,
-   "security-test": 9,
+   "security-test": 10,
    "payload": 4
   },
   "pickle": {
@@ -2115,8 +2115,8 @@
   },
   {
    "id": "fe7ef58fe955b",
-   "label": "benign",
-   "basis": ""
+   "label": "security-test",
+   "basis": "repository describes itself as security test material"
   },
   {
    "id": "f2e289a819d12",
@@ -18940,8 +18940,8 @@
   },
   {
    "id": "f09ee48bf1bff",
-   "label": "benign",
-   "basis": ""
+   "label": "security-test",
+   "basis": "repository describes itself as security test material"
   },
   {
    "id": "fc8f71f7ce07f",
@@ -26985,8 +26985,8 @@
   },
   {
    "id": "fce22987fe0c5",
-   "label": "code-by-design",
-   "basis": "MS501, MS503"
+   "label": "security-test",
+   "basis": "repository describes itself as security test material"
   },
   {
    "id": "f566b6a93cc15",
