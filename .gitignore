@@ -32,3 +32,9 @@ checkpoints/
 .DS_Store
 .idea/
 .vscode/
+
+# Rust
+target/
+*.so
+_scratch/
+benchmarks/.venv/
