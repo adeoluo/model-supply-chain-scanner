@@ -164,8 +164,9 @@ pub fn check(d: &[u8], total: u64, loc: &str) -> (Vec<Finding>, Info) {
                     out.push(Finding::new(
                         ids::SAFETENSORS_OFFSETS,
                         format!(
-                            "tensor {k:?} spans {} bytes but shape {shape:?} of {dtype} needs {want:?}",
-                            offs[1] - offs[0]
+                            "tensor {k:?} spans {} bytes but shape {shape:?} of {dtype} needs {}",
+                            offs[1] - offs[0],
+                            want.map_or("an overflowing number of".to_string(), |w| w.to_string())
                         ),
                         loc,
                     ));

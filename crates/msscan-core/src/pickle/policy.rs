@@ -1,9 +1,9 @@
 //! Classification of pickle globals: allowlist, denylist, library namespaces and nested loaders.
 
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 
 /// How a `module.name` global is classified.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, PartialOrd, Ord)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize, PartialOrd, Ord)]
 #[serde(rename_all = "lowercase")]
 pub enum Tier {
     /// Exact match on the allowlist of constructors found in ordinary checkpoints.

@@ -38,3 +38,4 @@ target/
 *.so
 _scratch/
 benchmarks/.venv/
+!tests/fixtures/**
