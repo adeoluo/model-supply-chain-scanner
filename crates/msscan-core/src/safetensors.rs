@@ -59,6 +59,8 @@ pub struct Info {
     pub tensors: u64,
     pub header_len: u64,
     pub metadata_keys: u64,
+    /// Only part of the header was supplied (headers-only scanning with a short prefix).
+    pub partial: bool,
 }
 
 /// Validate the header against `total`, the size of the whole file.
@@ -82,7 +84,7 @@ pub fn check(d: &[u8], total: u64, loc: &str) -> (Vec<Finding>, Info) {
         return (out, info);
     }
     let Some(raw) = d.get(8..8 + n as usize) else {
-        out.push(bad("header was not fully supplied".into()));
+        info.partial = true;
         return (out, info);
     };
     let Ok(text) = std::str::from_utf8(raw) else {
@@ -230,6 +232,8 @@ pub(crate) mod tests {
         // prefix mode: only the header was downloaded
         let (f, _) = check(&d[..8 + h.len()], d.len() as u64, "x");
         assert!(f.is_empty());
+        let (f, info) = check(&d[..20], d.len() as u64, "x");
+        assert!(f.is_empty() && info.partial);
         assert!(run(&st("{}", 0)).is_empty());
     }
 
