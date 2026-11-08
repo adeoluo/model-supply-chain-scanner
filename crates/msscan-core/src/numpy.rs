@@ -1,6 +1,6 @@
 //! NumPy `.npy` headers: format version, dtype, shape, and the pickle inside object arrays.
 
-use crate::finding::{ids, Finding};
+use crate::finding::{Finding, ids};
 
 pub const MAGIC: &[u8] = b"\x93NUMPY";
 

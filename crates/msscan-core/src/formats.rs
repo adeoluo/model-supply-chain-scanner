@@ -1,7 +1,7 @@
 //! Content sniffing and dispatch to the format analyzers.
 
 use crate::compress;
-use crate::finding::{ids, Finding};
+use crate::finding::{Finding, ids};
 use crate::scan::{self, Ctx};
 use crate::{gguf, hfjson, keras, numpy, onnx, pickle, safetensors, savedmodel, zip};
 

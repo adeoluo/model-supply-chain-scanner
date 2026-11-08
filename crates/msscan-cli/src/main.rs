@@ -2,8 +2,8 @@
 
 use clap::{Parser, Subcommand, ValueEnum};
 use msscan_core::report;
-use msscan_core::service::{serve, ServeConfig};
-use msscan_core::{scan_path, Options, Report, Severity, RULES};
+use msscan_core::service::{ServeConfig, serve};
+use msscan_core::{Options, RULES, Report, Severity, scan_path};
 use std::io::Write;
 use std::path::PathBuf;
 use std::process::ExitCode;

@@ -2,8 +2,8 @@
 //! Python layer turns into dataclasses.
 
 use msscan_core::report;
-use msscan_core::service::{serve as run_service, ServeConfig};
-use msscan_core::{scan_bytes as core_scan_bytes, scan_path as core_scan_path, Options, Severity, RULES};
+use msscan_core::service::{ServeConfig, serve as run_service};
+use msscan_core::{Options, RULES, Severity, scan_bytes as core_scan_bytes, scan_path as core_scan_path};
 use pyo3::exceptions::{PyOSError, PyValueError};
 use pyo3::prelude::*;
 use std::path::PathBuf;
