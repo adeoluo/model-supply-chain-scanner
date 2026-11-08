@@ -1,10 +1,22 @@
 cff-version: 1.2.0
-message: "If you use this work, please cite it."
+message: "If you use this software, please cite it as below."
+type: software
 title: "Model Supply Chain Scanner"
+abstract: "Static scanner for ML model files (pickle, PyTorch, joblib, NumPy, Keras, SavedModel, ONNX, GGUF, safetensors) that finds code execution and malformed structure before loading, with a Rust core, SARIF output and Python bindings"
 authors:
   - family-names: "Ogunnoiki"
     given-names: "Adeolu"
-version: 0.1.0
-date-released: 2026-01-01
+version: "0.1.0"
+date-released: "2026-11-04"
 license: MIT
-url: "REPO_URL"
+repository-code: "https://github.com/adeoluo/model-supply-chain-scanner"
+url: "https://github.com/adeoluo/model-supply-chain-scanner"
+keywords:
+  - "gguf"
+  - "machine-learning-security"
+  - "pickle"
+  - "pytorch"
+  - "rust"
+  - "safetensors"
+  - "sarif"
+  - "supply-chain-security"
