@@ -8,7 +8,7 @@
   <a href="https://github.com/adeoluo/model-supply-chain-scanner/actions/workflows/ci.yml"><img alt="CI" src="https://github.com/adeoluo/model-supply-chain-scanner/actions/workflows/ci.yml/badge.svg"></a>
   <a href="https://github.com/adeoluo/model-supply-chain-scanner/releases"><img alt="Release" src="https://img.shields.io/github/v/release/adeoluo/model-supply-chain-scanner"></a>
   <img alt="Rust" src="https://img.shields.io/badge/rust-stable-B7410E">
-  <img alt="Python" src="https://img.shields.io/badge/python-3.11%20%7C%203.12-blue">
+  <img alt="Python" src="https://img.shields.io/badge/python-3.12%20%7C%203.13%20%7C%203.14%20%7C%203.15-blue">
   <a href="LICENSE"><img alt="License: MIT" src="https://img.shields.io/badge/license-MIT-green"></a>
 </p>
 
@@ -307,7 +307,7 @@ make coverage    # Rust line coverage gate 85%, Python coverage gate 80%
   the HTTP service (`/health`, `/ready`, `/metrics`, `/v1/scan`), every bundled fixture's verdict,
   and the benchmark scoring and Hub labeling code.
 
-CI runs format, lint, type checks and both coverage gates on Python 3.11 and 3.12, the Rust
+CI runs format, lint, type checks and both coverage gates on Python 3.12, 3.13, 3.14 and 3.15, the Rust
 tests, the release binary on the fixtures with SARIF output, this repository's GitHub Action, and
 a Docker build probed over HTTP. CodeQL runs on pushes to main and weekly.
 

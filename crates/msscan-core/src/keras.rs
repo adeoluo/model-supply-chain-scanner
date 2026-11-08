@@ -5,7 +5,7 @@
 //! strings; both are found by locating `{"class_name"` objects in the raw bytes and parsing
 //! them with a string-aware brace matcher (ADR 0005).
 
-use crate::finding::{ids, Finding};
+use crate::finding::{Finding, ids};
 use crate::pickle::policy::{self, Tier};
 use serde_json::Value;
 
@@ -131,12 +131,11 @@ fn walk(v: &Value, w: &mut Walk, depth: u32, in_lambda: bool) {
             if is_lambda {
                 w.lambdas.push(name.clone());
             }
-            if class == "TFOpLambda" || class == "SlicingOpLambda" {
-                if let Some(f) = cfg.and_then(|c| c.get("function")).and_then(Value::as_str) {
-                    if DANGEROUS_TF_FUNCS.iter().any(|d| f.contains(d)) {
-                        w.tf_funcs.push(f.to_string());
-                    }
-                }
+            if (class == "TFOpLambda" || class == "SlicingOpLambda")
+                && let Some(f) = cfg.and_then(|c| c.get("function")).and_then(Value::as_str)
+                && DANGEROUS_TF_FUNCS.iter().any(|d| f.contains(d))
+            {
+                w.tf_funcs.push(f.to_string());
             }
             if let Some(module) = m.get("module").and_then(Value::as_str) {
                 let keras = KERAS_MODULE_PREFIXES
@@ -165,10 +164,11 @@ fn walk(v: &Value, w: &mut Walk, depth: u32, in_lambda: bool) {
                     w.external.push(full);
                 }
             }
-            if let Some(r) = m.get("registered_name").and_then(Value::as_str) {
-                if r.contains('>') && m.get("module").is_none_or(Value::is_null) {
-                    w.custom.push(r.to_string());
-                }
+            if let Some(r) = m.get("registered_name").and_then(Value::as_str)
+                && r.contains('>')
+                && m.get("module").is_none_or(Value::is_null)
+            {
+                w.custom.push(r.to_string());
             }
             for x in m.values() {
                 walk(x, w, depth + 1, in_lambda || is_lambda);

@@ -1,6 +1,6 @@
 //! safetensors headers: the same checks the reference loader makes, reported instead of raised.
 
-use crate::finding::{ids, Finding};
+use crate::finding::{Finding, ids};
 use serde::de::{Deserializer, MapAccess, Visitor};
 use serde_json::Value;
 use std::fmt;
