@@ -315,6 +315,10 @@ a Docker build probed over HTTP. CodeQL runs on pushes to main and weekly.
 
 - **Threat model:** [`docs/THREAT_MODEL.md`](docs/THREAT_MODEL.md) lists the techniques, the
   rules that cover them and the attacks that are out of scope.
+- **Standards:** the [threat model](docs/THREAT_MODEL.md#standards-mapping) maps every rule
+  family to LLM04:2026 Supply Chain in the OWASP Top 10 for LLM Applications 2026 and to MITRE
+  ATLAS v2026.10 (for example AML.T0011.000 User Execution: Unsafe AI Artifacts,
+  AML.T0018.002 Manipulate AI Model: Embed Malware and AML.T0076 Corrupt AI Model).
 - **Data card:** [`docs/DATA_CARD.md`](docs/DATA_CARD.md) describes both corpora.
 - **Inert fixtures:** every malicious file in the repository and the generated corpus calls a
   harmless function (`print`, `os.getcwd`) or names a file that does not exist; nothing deletes,

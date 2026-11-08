@@ -44,6 +44,32 @@ reports what loading it would do.
 | Native parser bugs | GGUF counts, string lengths, tensor bounds; safetensors offsets | Memory corruption or exhaustion in loaders | Structural validation (MS803, MS901, MS902) |
 | Scanner denial of service | Deep nesting, huge opcode counts | Slow or crashed scans | Limits on opcodes, nodes, container items, nesting depth (MS114) |
 
+## Standards mapping
+
+Each threat is mapped to the OWASP Top 10 for LLM Applications 2026 and MITRE ATLAS v2026.10
+(IDs and names checked against `ATLAS.yaml` from the
+[v2026.10 release of mitre-atlas/atlas-data](https://github.com/mitre-atlas/atlas-data/releases)).
+The OWASP Top 10 for Agentic Applications 2026 is not mapped: no agent is in scope, only the
+model file and the code that loads it.
+
+| Threat | OWASP LLM 2026 | MITRE ATLAS v2026.10 | Rules |
+|---|---|---|---|
+| Code execution on load | LLM04:2026 Supply Chain | AML.T0011.000 User Execution: Unsafe AI Artifacts; AML.T0018.002 Manipulate AI Model: Embed Malware; AML.T0010.003 Supply Chain Compromise: Model Repository; AML.T0115.001 Publish Poisoned AI Artifacts: Models | MS101 |
+| Evasion by computed imports, attribute writes, indirection, nested payloads, wrappers and hiding behind data | LLM04:2026 Supply Chain | AML.T0123 Obfuscated Files or Information; AML.T0018.002 Manipulate AI Model: Embed Malware | MS103, MS105, MS106, MS110, MS203, MS1001 |
+| Truncated or damaged pickles that run a payload before failing | LLM04:2026 Supply Chain | AML.T0076 Corrupt AI Model | MS109 |
+| Parser differentials | LLM04:2026 Supply Chain | AML.T0107 Exploitation for Defense Evasion | MS202, MS205 |
+| Keras code and graph side effects | LLM04:2026 Supply Chain | AML.T0011.000 User Execution: Unsafe AI Artifacts; AML.T0018.002 Manipulate AI Model: Embed Malware | MS501, MS502, MS505, MS601, MS602 |
+| Path traversal | LLM04:2026 Supply Chain | AML.T0011.000 User Execution: Unsafe AI Artifacts | MS201, MS701 |
+| Template injection | LLM04:2026 Supply Chain; LLM01:2026 Prompt Injection | AML.T0018.003 Manipulate AI Model: Modify Prompt Construction Logic | MS801, MS802 |
+| Native parser bugs | LLM04:2026 Supply Chain | AML.T0011.000 User Execution: Unsafe AI Artifacts | MS803, MS901, MS902 |
+| Decompression bombs and scanner denial of service | | AML.T0119 Exploit Automated Artifact Processing Pipeline | MS203, MS114 |
+| Poisoned or backdoored weights (out of scope) | LLM05:2026 Data and Model Poisoning | AML.T0018.000 Manipulate AI Model: Poison AI Model | none |
+
+`msscan` implements AML.M0016 Vulnerability Scanning for model files and supports AML.M0014
+Verify AI Artifacts; the safer-format advice in its findings follows AML.M0011 Restrict Library
+Loading. In NIST AI 600-1 (Generative AI Profile) terms it addresses the Information Security
+and Value Chain and Component Integration risks.
+
 ## Residual risk
 
 - Functions outside the denylist that run code are reported only as unknown or library calls
