@@ -29,7 +29,11 @@ import requests
 REAL = [
     ("opus-mt-en-de-pytorch_model.bin", "Helsinki-NLP/opus-mt-en-de", "pytorch_model.bin"),
     ("opus-mt-en-fr-pytorch_model.bin", "Helsinki-NLP/opus-mt-en-fr", "pytorch_model.bin"),
-    ("qwen2.5-0.5b-model.safetensors", "Qwen/Qwen2.5-0.5B-Instruct", "model.safetensors"),
+    (
+        "qwen3.5-0.8b-model.safetensors",
+        "Qwen/Qwen3.5-0.8B",
+        "model.safetensors-00001-of-00001.safetensors",
+    ),
 ]
 HF_CACHE = Path(os.environ.get("HF_HUB_CACHE", Path.home() / ".cache/huggingface/hub"))
 
