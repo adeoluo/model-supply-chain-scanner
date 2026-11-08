@@ -1,11 +1,11 @@
 [workspace]
-resolver = "2"
+resolver = "3"
 members = ["crates/msscan-core", "crates/msscan-cli", "crates/msscan-py"]
 default-members = ["crates/msscan-core", "crates/msscan-cli"]
 
 [workspace.package]
 version = "0.1.0"
-edition = "2021"
+edition = "2024"
 license = "MIT"
 authors = ["Adeolu Ogunnoiki"]
 repository = "https://github.com/adeoluo/model-supply-chain-scanner"

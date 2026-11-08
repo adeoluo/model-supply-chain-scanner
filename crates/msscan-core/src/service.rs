@@ -4,7 +4,7 @@
 //! client, so it cannot be used to read the server's files or reach other hosts.
 
 use crate::finding::RULES;
-use crate::scan::{scan_bytes, Options, Report};
+use crate::scan::{Options, Report, scan_bytes};
 use std::collections::BTreeMap;
 use std::io::Read;
 use std::sync::{Arc, Mutex};

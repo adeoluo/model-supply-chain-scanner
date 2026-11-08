@@ -1,6 +1,6 @@
 //! GGUF headers: structural validation and chat template checks.
 
-use crate::finding::{ids, Finding};
+use crate::finding::{Finding, ids};
 use crate::jinja;
 use std::collections::HashSet;
 
@@ -230,10 +230,10 @@ fn parse(d: &[u8], total: u64, loc: &str, info: &mut GgufInfo, out: &mut Vec<Fin
         if key == "general.architecture" {
             info.architecture = v.map(|b| String::from_utf8_lossy(b).into_owned());
         }
-        if key.starts_with("tokenizer.chat_template") {
-            if let Some(b) = v {
-                info.chat_templates.push((key, String::from_utf8_lossy(b).into_owned()));
-            }
+        if key.starts_with("tokenizer.chat_template")
+            && let Some(b) = v
+        {
+            info.chat_templates.push((key, String::from_utf8_lossy(b).into_owned()));
         }
     }
     let mut tensors = Vec::with_capacity(info.tensor_count.min(1 << 16) as usize);

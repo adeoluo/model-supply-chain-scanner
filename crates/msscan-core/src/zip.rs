@@ -1,7 +1,7 @@
 //! A zip reader that trusts nothing: it reads the central directory, cross-checks every local
 //! header, and reports traversal names, encryption, unsupported methods and size limits.
 
-use crate::finding::{ids, Finding};
+use crate::finding::{Finding, ids};
 use std::io::Read;
 
 #[derive(Debug, Clone, PartialEq)]
@@ -85,13 +85,13 @@ pub fn read(d: &[u8], loc: &str) -> Archive {
     let mut cd_off = u32_at(d, eocd + 16).unwrap_or(0) as u64;
     if count == 0xffff || cd_off == 0xffff_ffff {
         // ZIP64 end of central directory locator sits right before the EOCD record.
-        if eocd >= 20 && &d[eocd - 20..eocd - 16] == b"PK\x06\x07" {
-            if let Some(rec) = u64_at(d, eocd - 12).and_then(|o| usize::try_from(o).ok()) {
-                if d.get(rec..rec + 4) == Some(b"PK\x06\x06") {
-                    count = u64_at(d, rec + 32).unwrap_or(count);
-                    cd_off = u64_at(d, rec + 48).unwrap_or(cd_off);
-                }
-            }
+        if eocd >= 20
+            && &d[eocd - 20..eocd - 16] == b"PK\x06\x07"
+            && let Some(rec) = u64_at(d, eocd - 12).and_then(|o| usize::try_from(o).ok())
+            && d.get(rec..rec + 4) == Some(b"PK\x06\x06")
+        {
+            count = u64_at(d, rec + 32).unwrap_or(count);
+            cd_off = u64_at(d, rec + 48).unwrap_or(cd_off);
         }
     }
     let mut p = cd_off as usize;
@@ -177,11 +177,11 @@ fn apply_zip64(extra: &[u8], size: &mut u64, csize: &mut u64, off: &mut u64) {
         if id == 1 {
             let mut j = 0;
             for v in [&mut *size, &mut *csize, &mut *off] {
-                if *v == 0xffff_ffff {
-                    if let Some(x) = u64_at(body, j) {
-                        *v = x;
-                        j += 8;
-                    }
+                if *v == 0xffff_ffff
+                    && let Some(x) = u64_at(body, j)
+                {
+                    *v = x;
+                    j += 8;
                 }
             }
         }

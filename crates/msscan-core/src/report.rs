@@ -1,8 +1,8 @@
 //! Report renderers: text, JSON, SARIF 2.1.0 and the Markdown rule catalog.
 
-use crate::finding::{Severity, RULES};
+use crate::finding::{RULES, Severity};
 use crate::scan::Report;
-use serde_json::{json, Value};
+use serde_json::{Value, json};
 use std::fmt::Write;
 
 /// Human-readable report; findings below `min` are hidden.
@@ -147,7 +147,7 @@ pub fn rules_markdown() -> String {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::scan::{scan_bytes, Options};
+    use crate::scan::{Options, scan_bytes};
 
     #[test]
     fn sarif_has_rules_and_results() {

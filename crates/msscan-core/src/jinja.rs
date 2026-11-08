@@ -1,6 +1,6 @@
 //! Chat template checks: server-side template injection patterns in Jinja tags.
 
-use crate::finding::{ids, Finding};
+use crate::finding::{Finding, ids};
 
 /// Python internals that sandbox escapes reach for.
 const DUNDERS: &[&str] = &[
@@ -156,12 +156,14 @@ mod tests {
             check(with_text, "t", "x").is_empty(),
             "literal text outside tags is not evaluated"
         );
-        assert!(check(
-            "{% set x = namespace(found=false) %}{{ raise_exception('no') }}",
-            "t",
-            "x"
-        )
-        .is_empty());
+        assert!(
+            check(
+                "{% set x = namespace(found=false) %}{{ raise_exception('no') }}",
+                "t",
+                "x"
+            )
+            .is_empty()
+        );
         assert!(check("{{ retrieval(docs) }}{{ x.premro(1) }}", "t", "x").is_empty());
     }
 

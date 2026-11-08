@@ -1,6 +1,6 @@
 //! Hugging Face JSON files: remote code mappings and chat templates.
 
-use crate::finding::{ids, Finding};
+use crate::finding::{Finding, ids};
 use crate::jinja;
 use serde_json::Value;
 
@@ -61,9 +61,10 @@ mod tests {
         assert!(looks_like_json(c));
         let f = check(c, "config.json");
         assert_eq!(f.len(), 2);
-        assert!(f
-            .iter()
-            .any(|x| x.rule == ids::HF_REMOTE_CODE && x.message.contains("modeling_x.XModel")));
+        assert!(
+            f.iter()
+                .any(|x| x.rule == ids::HF_REMOTE_CODE && x.message.contains("modeling_x.XModel"))
+        );
         assert!(f.iter().any(|x| x.rule == ids::GGUF_TEMPLATE_INJECTION));
         assert!(check(br#"{"chat_template": "{{ messages }}"}"#, "t").is_empty());
         assert!(check(b"not json", "t").is_empty());

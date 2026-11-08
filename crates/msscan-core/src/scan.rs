@@ -1,7 +1,7 @@
 //! Format detection and the scan entry points.
 
 use crate::compress;
-use crate::finding::{ids, Finding, Severity};
+use crate::finding::{Finding, Severity, ids};
 use crate::numpy;
 use crate::pickle::{self, Limits, Tier};
 use crate::zip;
@@ -197,17 +197,17 @@ pub(crate) fn scan_buffer(ctx: &mut Ctx, data: &[u8], member: &str, depth: u8) -
         return "nested".into();
     }
     let format = crate::formats::dispatch(ctx, data, member, depth);
-    if depth == 0 {
-        if let Some(want) = expected_format(member) {
-            let got = family(&format);
-            let compressed_pickle = want == "pickle" && format.contains('+');
-            if want != got && format != "unknown" && !(want == "json" && got == "hf-config") && !compressed_pickle {
-                ctx.findings.push(Finding::new(
-                    ids::FORMAT_MISMATCH,
-                    format!("the name suggests {want} but the content is {format}"),
-                    member,
-                ));
-            }
+    if depth == 0
+        && let Some(want) = expected_format(member)
+    {
+        let got = family(&format);
+        let compressed_pickle = want == "pickle" && format.contains('+');
+        if want != got && format != "unknown" && !(want == "json" && got == "hf-config") && !compressed_pickle {
+            ctx.findings.push(Finding::new(
+                ids::FORMAT_MISMATCH,
+                format!("the name suggests {want} but the content is {format}"),
+                member,
+            ));
         }
     }
     format

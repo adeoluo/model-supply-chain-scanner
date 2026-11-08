@@ -214,10 +214,11 @@ fn nested_pickle_loads_is_scanned() {
 fn nested_loader_without_constant_payload() {
     let data = P::new(3).global("pickle", "loads").op(b"N").op(&[0x85, b'R']).stop();
     let r = run(&data);
-    assert!(r
-        .findings
-        .iter()
-        .any(|f| f.rule == ids::PICKLE_NESTED_LOADER && f.message.contains("not scanned")));
+    assert!(
+        r.findings
+            .iter()
+            .any(|f| f.rule == ids::PICKLE_NESTED_LOADER && f.message.contains("not scanned"))
+    );
 }
 
 #[test]
@@ -296,10 +297,11 @@ fn trailing_bytes_and_second_pickle() {
     let mut d = P::new(2).op(b"N").stop();
     d.extend_from_slice(&[0x80, 2, b'K']);
     let r = run(&d);
-    assert!(r
-        .findings
-        .iter()
-        .any(|f| f.rule == ids::PICKLE_TRAILING && f.message.contains("after the last complete")));
+    assert!(
+        r.findings
+            .iter()
+            .any(|f| f.rule == ids::PICKLE_TRAILING && f.message.contains("after the last complete"))
+    );
 }
 
 #[test]

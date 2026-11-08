@@ -14,7 +14,7 @@ flate2 = { version = "1", default-features = false, features = ["rust_backend"] 
 lz4_flex = { version = "0.14", default-features = false, features = ["frame", "std"] }
 lzma-rs = "0.3"
 memmap2 = "0.9"
-rayon = "1.10"
+rayon = "1.12"
 serde = { version = "1", features = ["derive"] }
 serde_json = { version = "1", features = ["preserve_order"] }
 sha2 = "0.11"

@@ -1,6 +1,6 @@
 //! TensorFlow SavedModel graphs: ops that touch files or call Python.
 
-use crate::finding::{ids, Finding, Severity};
+use crate::finding::{Finding, Severity, ids};
 use crate::protobuf::{Error, Reader, Value};
 use std::collections::BTreeMap;
 

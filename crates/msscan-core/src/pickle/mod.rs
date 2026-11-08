@@ -8,7 +8,7 @@
 
 pub mod policy;
 
-use crate::finding::{ids, Finding, Severity};
+use crate::finding::{Finding, Severity, ids};
 pub use policy::Tier;
 use policy::{classify, is_nested_loader};
 use serde::Serialize;
@@ -231,10 +231,10 @@ impl<'s, 'a> Vm<'s, 'a> {
     }
 
     fn pop(&mut self) -> Result<u32, Stop> {
-        if let Some(&m) = self.marks.last() {
-            if self.stack.len() <= m {
-                return Err(Stop::Underflow);
-            }
+        if let Some(&m) = self.marks.last()
+            && self.stack.len() <= m
+        {
+            return Err(Stop::Underflow);
         }
         self.stack.pop().ok_or(Stop::Underflow)
     }
@@ -355,10 +355,10 @@ impl<'s, 'a> Vm<'s, 'a> {
 
     fn dict_set(&mut self, target: u32, k: u32, v: u32) {
         let cap = self.sh.limits.max_container_items;
-        if let Node::Dict(kv) = &mut self.nodes[target as usize] {
-            if kv.len() < cap {
-                kv.push((k, v));
-            }
+        if let Node::Dict(kv) = &mut self.nodes[target as usize]
+            && kv.len() < cap
+        {
+            kv.push((k, v));
         }
     }
 
@@ -512,12 +512,12 @@ impl<'s, 'a> Vm<'s, 'a> {
         };
         let mut keys = dunder(self, state);
         let mut slot_state = None;
-        if let Node::Tuple(t) = &self.nodes[state as usize] {
-            if t.len() == 2 {
-                keys.extend(dunder(self, t[0]));
-                keys.extend(dunder(self, t[1]));
-                slot_state = Some(t[1]);
-            }
+        if let Node::Tuple(t) = &self.nodes[state as usize]
+            && t.len() == 2
+        {
+            keys.extend(dunder(self, t[0]));
+            keys.extend(dunder(self, t[1]));
+            slot_state = Some(t[1]);
         }
         if !keys.is_empty() {
             self.mark_called(state);
@@ -1137,16 +1137,15 @@ fn decode_raw_unicode_escape(l: &[u8]) -> String {
     while i < l.len() {
         if l[i] == b'\\' && i + 1 < l.len() && (l[i + 1] == b'u' || l[i + 1] == b'U') {
             let w = if l[i + 1] == b'u' { 4 } else { 8 };
-            if i + 2 + w <= l.len() {
-                if let Some(c) = std::str::from_utf8(&l[i + 2..i + 2 + w])
+            if i + 2 + w <= l.len()
+                && let Some(c) = std::str::from_utf8(&l[i + 2..i + 2 + w])
                     .ok()
                     .and_then(|h| u32::from_str_radix(h, 16).ok())
                     .and_then(char::from_u32)
-                {
-                    out.push(c);
-                    i += 2 + w;
-                    continue;
-                }
+            {
+                out.push(c);
+                i += 2 + w;
+                continue;
             }
         }
         out.push(l[i] as char);

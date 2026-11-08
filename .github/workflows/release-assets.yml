@@ -39,7 +39,7 @@ jobs:
           targets: ${{ matrix.target }}
 
       - name: Install uv
-        uses: astral-sh/setup-uv@v7
+        uses: astral-sh/setup-uv@v10.3.3
 
       - name: Build the binary
         run: cargo build --release --locked -p msscan --target ${{ matrix.target }}
@@ -55,7 +55,7 @@ jobs:
           if [[ "${{ runner.os }}" == "Windows" ]]; then 7z a -bd "$name.zip" "$name" > /dev/null; else tar czf "$name.tar.gz" "$name"; fi
           rm -rf "$name"
 
-      - name: Build the wheel (abi3, Python 3.11 and later)
+      - name: Build the wheel (abi3, Python 3.12 and later)
         if: matrix.wheel
         shell: bash
         run: uv build --wheel --python 3.12 --out-dir dist

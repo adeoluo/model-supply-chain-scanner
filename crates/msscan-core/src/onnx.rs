@@ -1,6 +1,6 @@
 //! ONNX models: external data paths and operator domains.
 
-use crate::finding::{ids, Finding};
+use crate::finding::{Finding, ids};
 use crate::protobuf::{Error, Reader, Value};
 use std::collections::BTreeSet;
 
@@ -49,10 +49,10 @@ fn tensor(d: &[u8], info: &mut OnnxInfo) -> Result<(), Error> {
                 }
                 Ok(())
             })?;
-            if key.as_deref() == Some("location") {
-                if let Some(v) = value {
-                    info.external_locations.insert(v);
-                }
+            if key.as_deref() == Some("location")
+                && let Some(v) = value
+            {
+                info.external_locations.insert(v);
             }
         }
         Ok(())
@@ -228,9 +228,10 @@ pub(crate) mod tests {
         assert_eq!(info.ir_version, 8);
         assert!(info.external_locations.contains("sub.bin"));
         assert_eq!(f.iter().filter(|x| x.rule == ids::ONNX_EXTERNAL_TRAVERSAL).count(), 3);
-        assert!(f
-            .iter()
-            .any(|x| x.rule == ids::ONNX_CUSTOM_DOMAIN && x.message.contains("com.example")));
+        assert!(
+            f.iter()
+                .any(|x| x.rule == ids::ONNX_CUSTOM_DOMAIN && x.message.contains("com.example"))
+        );
         let (f, _) = check(
             &model(&["model.onnx_data"], &["", "ai.onnx.ml", "com.microsoft"]),
             "m.onnx",

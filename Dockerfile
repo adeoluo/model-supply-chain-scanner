@@ -1,7 +1,7 @@
 # syntax=docker/dockerfile:1
 
 # ---- build the static scanner binary ----
-FROM rust:1-slim-bookworm AS builder
+FROM rust:1-slim-trixie AS builder
 WORKDIR /src
 COPY Cargo.toml Cargo.lock rustfmt.toml ./
 COPY crates ./crates
@@ -10,7 +10,7 @@ RUN --mount=type=cache,target=/usr/local/cargo/registry \
     cargo build --release --locked -p msscan && cp target/release/msscan /msscan
 
 # ---- runtime: the binary only ----
-FROM debian:bookworm-slim AS runtime
+FROM debian:trixie-slim AS runtime
 RUN useradd --create-home --uid 1000 msscan
 COPY --from=builder /msscan /usr/local/bin/msscan
 USER msscan

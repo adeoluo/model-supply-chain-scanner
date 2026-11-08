@@ -22,5 +22,5 @@ pub mod scan;
 pub mod service;
 pub mod zip;
 
-pub use finding::{Finding, Rule, Severity, RULES};
-pub use scan::{scan_bytes, scan_file, scan_path, Options, Report, Verdict};
+pub use finding::{Finding, RULES, Rule, Severity};
+pub use scan::{Options, Report, Verdict, scan_bytes, scan_file, scan_path};
