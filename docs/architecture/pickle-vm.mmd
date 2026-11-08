@@ -1,0 +1,21 @@
+flowchart TB
+    classDef edge     fill:#F59E0B,stroke:#1E293B,color:#1E293B,stroke-width:1px;
+    classDef core     fill:#6366F1,stroke:#1E293B,color:#ffffff,stroke-width:1px;
+    classDef data     fill:#10B981,stroke:#1E293B,color:#ffffff,stroke-width:1px;
+    classDef control  fill:#0EA5E9,stroke:#1E293B,color:#ffffff,stroke-width:1px;
+    classDef obs      fill:#CBD5E1,stroke:#1E293B,color:#1E293B,stroke-width:1px;
+    Bytes[bytes] --> Op[decode opcode]
+    Op -->|GLOBAL, STACK_GLOBAL, INST| Imp[import table and tier]
+    Op -->|REDUCE, OBJ, NEWOBJ| Call[call node; mark callee and args called]
+    Op -->|BUILD| Build[dunder keys, global targets, joblib arrays]
+    Call -->|pickle.loads on bytes| Nested[recursive analysis]
+    Op -->|STOP| Next[next pickle or trailing data]
+    Imp --> Findings
+    Call --> Findings
+    Build --> Findings
+    Nested --> Findings
+
+    class Op,Call,Build,Nested,Next core;
+    class Bytes data;
+    class Imp control;
+    class Findings obs;
