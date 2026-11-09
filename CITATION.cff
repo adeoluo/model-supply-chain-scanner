@@ -6,8 +6,8 @@ abstract: "Static scanner for ML model files (pickle, PyTorch, joblib, NumPy, Ke
 authors:
   - family-names: "Ogunnoiki"
     given-names: "Adeolu"
-version: "0.1.0"
-date-released: "2026-11-04"
+version: "0.1.1"
+date-released: "2026-11-09"
 license: MIT
 repository-code: "https://github.com/adeoluo/model-supply-chain-scanner"
 url: "https://github.com/adeoluo/model-supply-chain-scanner"

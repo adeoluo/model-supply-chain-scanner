@@ -1,6 +1,6 @@
 [project]
 name = "model-supply-chain-scanner"
-version = "0.1.0"
+version = "0.1.1"
 description = "Scan machine learning model files for code execution and unsafe content before loading them"
 readme = "README.md"
 requires-python = ">=3.12"

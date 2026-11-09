@@ -4,7 +4,7 @@ members = ["crates/msscan-core", "crates/msscan-cli", "crates/msscan-py"]
 default-members = ["crates/msscan-core", "crates/msscan-cli"]
 
 [workspace.package]
-version = "0.1.0"
+version = "0.1.1"
 edition = "2024"
 license = "MIT"
 authors = ["Adeolu Ogunnoiki"]
