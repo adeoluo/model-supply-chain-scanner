@@ -34,19 +34,11 @@ calls are still tracked. Findings are produced from the import table at the end,
 during execution (dynamic imports, attribute injection, indirect calls, nested loaders, joblib
 arrays). `policy.rs` holds the tiers (ADR 0003).
 
-```mermaid
-flowchart TB
-    Bytes[bytes] --> Op[decode opcode]
-    Op -->|GLOBAL, STACK_GLOBAL, INST| Imp[import table and tier]
-    Op -->|REDUCE, OBJ, NEWOBJ| Call[call node; mark callee and args called]
-    Op -->|BUILD| Build[dunder keys, global targets, joblib arrays]
-    Call -->|pickle.loads on bytes| Nested[recursive analysis]
-    Op -->|STOP| Next[next pickle or trailing data]
-    Imp --> Findings
-    Call --> Findings
-    Build --> Findings
-    Nested --> Findings
-```
+<p align="center">
+  <img src="architecture/pickle-vm.svg" alt="The pickle virtual machine diagram" width="718">
+</p>
+
+<sub>Legend: amber = entry points and external systems, indigo = core logic, green = data and state, blue = validation and control, grey = observability and outputs.</sub>
 
 ## Formats
 
