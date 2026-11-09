@@ -75,9 +75,10 @@ speed: build ## Wall time and peak memory on large real checkpoints (benchmarks/
 rules-doc: build ## Regenerate docs/RULES.md
 	./target/release/msscan rules --format markdown > docs/RULES.md
 
-diagram: ## Render the architecture diagram
-	npx -y @mermaid-js/mermaid-cli -i docs/architecture/architecture.mmd -o docs/architecture/architecture.svg \
-	  -c docs/architecture/mermaid.config.json -b transparent
+diagram: ## Render every diagram in docs/architecture to SVG (house theme, white background)
+	@for f in docs/architecture/*.mmd; do \
+		npx -y @mermaid-js/mermaid-cli -q -i "$$f" -o "$${f%.mmd}.svg" -c mermaid.config.json -b white || exit 1; \
+	done
 
 docker: ## Build the container image
 	docker build -t msscan .
