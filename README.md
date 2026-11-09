@@ -145,23 +145,25 @@ Raw rows (pseudonymous ids, no repository names):
 [`benchmarks/speed.py`](benchmarks/speed.py) runs each tool on each file three times in a fresh
 process under `/usr/bin/time -l` and reports the median wall time and peak resident memory
 (including interpreter start-up and imports for the Python tools). The checkpoints are real Hub
-files (Helsinki-NLP opus-mt-en-de and opus-mt-en-fr PyTorch zips, Qwen2.5-0.5B-Instruct
-safetensors); the plain-data pickle (31 MB, about 3.35 million list items, no globals)
-is generated with seed 0. The machine was shared with other work, so individual runs of one tool on one
-file differ by up to 3.4 times; raw runs are in [`speed.json`](benchmarks/results/speed.json).
+files (Helsinki-NLP opus-mt-en-de and opus-mt-en-fr PyTorch zips, the Qwen3.5-0.8B
+safetensors file); the plain-data pickle (31 MB, about 3.35 million list items, no globals)
+is generated with seed 0. The machine was shared with other work. The first of the three runs
+is slower while a file is not yet in the page cache (up to 26 times, for msscan's first scan of
+the first file), and the second and third runs of every tool agree within 1.25 times; raw runs
+are in [`speed.json`](benchmarks/results/speed.json).
 
-| Tool | opus-mt-en-de `.bin` (284 MB) | opus-mt-en-fr `.bin` (287 MB) | Qwen2.5-0.5B `.safetensors` (942 MB) | plain-data pickle (31 MB) |
+| Tool | opus-mt-en-de `.bin` (284 MB) | opus-mt-en-fr `.bin` (287 MB) | Qwen3.5-0.8B `.safetensors` (1,666 MB) | plain-data pickle (31 MB) |
 |---|---:|---:|---:|---:|
-| **msscan** (binary) | < 0.01 s, 4 MB | 0.01 s, 4 MB | 0.01 s, 3 MB | 0.58 s, 239 MB |
-| msscan (Python package) | 0.33 s, 20 MB | 0.18 s, 21 MB | 0.10 s, 21 MB | 0.30 s, 258 MB |
-| picklescan | 0.15 s, 26 MB | 0.21 s, 26 MB | 0.16 s, 24 MB | 24 s, 688 MB |
-| modelscan | 0.44 s, 39 MB | 0.47 s, 39 MB | 0.43 s, 39 MB | 27 s, 579 MB |
-| fickling | 6.53 s, 251 MB | 6.01 s, 286 MB | 6.72 s, 280 MB | 190 s, 828 MB |
+| **msscan** (binary) | 0.01 s, 4 MB | < 0.01 s, 4 MB | < 0.01 s, 4 MB | 0.24 s, 241 MB |
+| msscan (Python package) | 0.06 s, 21 MB | 0.06 s, 21 MB | 0.05 s, 21 MB | 0.42 s, 258 MB |
+| picklescan | 0.19 s, 25 MB | 0.08 s, 26 MB | 0.08 s, 24 MB | 11 s, 896 MB |
+| modelscan | 0.25 s, 40 MB | 0.17 s, 40 MB | 0.16 s, 40 MB | 12 s, 728 MB |
+| fickling | 2.52 s, 318 MB | 2.32 s, 297 MB | 3.86 s, 504 MB | 103 s, 713 MB |
 
 msscan memory-maps the file and reads only the pickle members of a zip or the header of a
 safetensors file, so its cost does not grow with the weights. On the plain-data pickle, which
-every tool must walk opcode by opcode, msscan takes 0.3 to 0.6 s against 24 s (picklescan), 27 s
-(modelscan) and 190 s (fickling). On the Hub corpus, msscan scanned all 7,607 files in
+every tool must walk opcode by opcode, msscan takes 0.24 to 0.42 s against 11 s (picklescan),
+12 s (modelscan) and 103 s (fickling). On the Hub corpus, msscan scanned all 7,607 files in
 9.8 s in one process; on the 2,244 files the other tools received, picklescan took
 75.3 s, modelscan 33.4 s and fickling 683.4 s.
 
