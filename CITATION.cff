@@ -20,3 +20,5 @@ keywords:
   - "safetensors"
   - "sarif"
   - "supply-chain-security"
+  - "mitre-atlas"
+  - "owasp-llm-top-10"

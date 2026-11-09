@@ -102,15 +102,18 @@ files the other tools received, picklescan 75.3 s, modelscan 33.4 s, fickling 68
 ## 3. Speed and memory
 
 `make speed`. Median of three runs per tool and file, each in a fresh process under
-`/usr/bin/time -l`, Python start-up and imports included.
+`/usr/bin/time -l`, Python start-up and imports included. The safetensors file is the single
+shard of `Qwen/Qwen3.5-0.8B` (1,746,942,600 bytes); the earlier table used the
+Qwen2.5-0.5B-Instruct file (942 MB), and msscan's cost on it is the same because only the header
+is read.
 
-| Tool | opus-mt-en-de `.bin` (284 MB) | opus-mt-en-fr `.bin` (287 MB) | Qwen2.5-0.5B `.safetensors` (942 MB) | plain-data pickle (31 MB) |
+| Tool | opus-mt-en-de `.bin` (284 MB) | opus-mt-en-fr `.bin` (287 MB) | Qwen3.5-0.8B `.safetensors` (1,666 MB) | plain-data pickle (31 MB) |
 |---|---:|---:|---:|---:|
-| **msscan** (binary) | < 0.01 s, 4 MB | 0.01 s, 4 MB | 0.01 s, 3 MB | 0.58 s, 239 MB |
-| msscan (Python package) | 0.33 s, 20 MB | 0.18 s, 21 MB | 0.10 s, 21 MB | 0.30 s, 258 MB |
-| picklescan | 0.15 s, 26 MB | 0.21 s, 26 MB | 0.16 s, 24 MB | 24 s, 688 MB |
-| modelscan | 0.44 s, 39 MB | 0.47 s, 39 MB | 0.43 s, 39 MB | 27 s, 579 MB |
-| fickling | 6.53 s, 251 MB | 6.01 s, 286 MB | 6.72 s, 280 MB | 190 s, 828 MB |
+| **msscan** (binary) | 0.01 s, 4 MB | < 0.01 s, 4 MB | < 0.01 s, 4 MB | 0.24 s, 241 MB |
+| msscan (Python package) | 0.06 s, 21 MB | 0.06 s, 21 MB | 0.05 s, 21 MB | 0.42 s, 258 MB |
+| picklescan | 0.19 s, 25 MB | 0.08 s, 26 MB | 0.08 s, 24 MB | 11 s, 896 MB |
+| modelscan | 0.25 s, 40 MB | 0.17 s, 40 MB | 0.16 s, 40 MB | 12 s, 728 MB |
+| fickling | 2.52 s, 318 MB | 2.32 s, 297 MB | 3.86 s, 504 MB | 103 s, 713 MB |
 
 ## Error analysis
 
@@ -140,7 +143,7 @@ make build
 make corpus validate compare        # synthetic corpus (about 1 MB)
 make hf-list hf-fetch               # Hub corpus (2.5 GB stored, rate limited)
 make hf-compare hf-review           # 13 minutes here, mostly fickling
-make speed                          # 25 minutes here, mostly fickling on the plain-data pickle
+make speed                          # 8 minutes here, mostly fickling on the plain-data pickle
 ```
 
 The Hub listing changes over time, so a fresh collection gives a different sample; the committed
