@@ -14,6 +14,8 @@
 
 ---
 
+> **Evidence level: publicly benchmarked, with limits.** Compared with picklescan, modelscan and fickling on a corpus written by the scanner's author, and run over 7,607 public Hugging Face files that have no ground-truth labels. Bypasses reported by outside reviewers are listed with their fixes below. Not independently reproduced and not used in production. [What the levels mean](https://github.com/adeoluo#evidence-levels).
+
 ## Motivation
 
 Loading a model is often running code. `torch.load` with `weights_only=False`, `pickle`,
