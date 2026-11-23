@@ -79,6 +79,27 @@ fn pickle_inside_unusual_member_name_is_found() {
 }
 
 #[test]
+fn truncated_protocol_zero_pickle_without_stop_is_malicious() {
+    // Missing final '.' STOP opcode: Python executes REDUCE (`os.system`) before raising
+    // UnpicklingError. Must be caught regardless of filename extension.
+    let truncated_p0 = b"cos\nsystem\n(S'echo pwned'\ntR";
+    for name in ["payload.pkl", "model.pt", "unlabeled_blob"] {
+        let r = scan(truncated_p0, name);
+        assert_eq!(r.format, "pickle", "missed format for {name}: {r:?}");
+        assert_eq!(r.verdict, Verdict::Malicious, "missed verdict for {name}: {r:?}");
+        assert!(rules(&r).contains(&ids::PICKLE_DANGEROUS_CALL));
+        assert!(rules(&r).contains(&ids::PICKLE_MALFORMED));
+    }
+    // Plain English prose starting with 'c' must still not be misclassified as a pickle.
+    let prose = scan(
+        b"chapter 1\nthis is plain text, not a pickle stream at all\n",
+        "readme.txt",
+    );
+    assert_eq!(prose.format, "unknown");
+    assert_eq!(prose.verdict, Verdict::Clean);
+}
+
+#[test]
 fn npy_and_npz_object_arrays() {
     let d = npy("'|O'", "(1,)", GETCWD);
     let r = scan(&d, "a.npy");

@@ -100,7 +100,7 @@ pub(crate) fn dispatch(ctx: &mut Ctx, data: &[u8], member: &str, depth: u8) -> S
             ctx.findings.extend(f);
             fmt.into()
         }
-        _ if pickle::is_pickle(data) => scan::scan_pickle(ctx, data, member),
+        _ if pickle::is_pickle(data) || pickle::has_pickle_extension(member) => scan::scan_pickle(ctx, data, member),
         // A file named .safetensors that does not even look like one: report why.
         _ if base_name(member).ends_with(".safetensors") => {
             let (f, _) = safetensors::check(data, total, member);

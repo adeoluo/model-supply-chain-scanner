@@ -1293,7 +1293,17 @@ fn analyze_with(data: &[u8], loc: &str, limits: Limits, depth: u8) -> PickleRepo
     }
 }
 
-/// Cheap check used by format detection: does `data` parse as at least one complete pickle?
+/// Whether `name` carries a standard pickle/checkpoint file extension.
+pub fn has_pickle_extension(name: &str) -> bool {
+    let b = name.rsplit(['/', '\\']).next().unwrap_or(name).to_ascii_lowercase();
+    matches!(
+        b.rsplit_once('.').map(|(_, ext)| ext),
+        Some("pkl" | "pickle" | "pck" | "pcl" | "pt" | "pth" | "bin" | "joblib" | "ckpt")
+    ) || b == "data.pkl"
+}
+
+/// Cheap check used by format detection: does `data` parse as at least one complete pickle,
+/// or as a truncated protocol 0/1 pickle that already imports globals or executes calls before EOF?
 pub fn is_pickle(data: &[u8]) -> bool {
     if data.is_empty() {
         return false;
@@ -1301,8 +1311,10 @@ pub fn is_pickle(data: &[u8]) -> bool {
     if looks_like_pickle_start(data) {
         return true;
     }
-    // Protocol 0 and 1 have no header: accept if a short prefix parses to STOP cleanly
-    // and starts with an opcode that a pickler emits first.
+    // Protocol 0 and 1 have no header: accept if a short prefix parses to STOP cleanly, OR
+    // if it starts with a valid pickle opcode and imports at least one global or triggers a
+    // call/malformed stream after executing real opcodes (Python executes every opcode before
+    // raising UnpicklingError on a missing trailing STOP byte).
     if !b"(c]}NIJKLSTUVX)lde".contains(&data[0]) {
         return false;
     }
@@ -1311,7 +1323,25 @@ pub fn is_pickle(data: &[u8]) -> bool {
         ..Limits::default()
     };
     let r = analyze(&data[..data.len().min(16 << 20)], "", limits);
-    r.pickles > 0 && !r.findings.iter().any(|f| f.rule == ids::PICKLE_MALFORMED)
+    if r.pickles > 0 && !r.findings.iter().any(|f| f.rule == ids::PICKLE_MALFORMED) {
+        return true;
+    }
+    // For unframed protocol 0/1 without a trailing STOP byte, require either an observed call
+    // (`REDUCE` / `INST` / `OBJ` / `NEWOBJ` / `BUILD` / dynamic import) or a recognized
+    // `Safe`/`Library`/`Dangerous` global so plain English prose starting with `'c'` is ignored.
+    r.imports.iter().any(|imp| imp.called || imp.tier != Tier::Unknown)
+        || r.findings.iter().any(|f| {
+            matches!(
+                f.rule.as_str(),
+                ids::PICKLE_DANGEROUS_CALL
+                    | ids::PICKLE_DANGEROUS_IMPORT
+                    | ids::PICKLE_DYNAMIC_IMPORT
+                    | ids::PICKLE_EXTENSION_REGISTRY
+                    | ids::PICKLE_ATTRIBUTE_INJECTION
+                    | ids::PICKLE_NESTED_LOADER
+                    | ids::PICKLE_INDIRECT_CALL
+            )
+        })
 }
 
 #[cfg(test)]
