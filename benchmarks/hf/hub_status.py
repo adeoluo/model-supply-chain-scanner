@@ -1,4 +1,4 @@
-"""Ask the Hugging Face Hub what its own scanners say about the files labeled ``payload``.
+"""Ask the Hugging Face Hub what its own scanners say about every file msscan rates high.
 
 The Hub scans every file with several tools (Protect AI Guardian, JFrog, picklescan, ClamAV and
 VirusTotal) and publishes the result. This script reads that result for each payload file of the
@@ -80,15 +80,36 @@ def presents_as_test(repo: str, path: str) -> dict[str, bool]:
     }
 
 
+def by_id_rules(corpus: Path, fid: str) -> list[str]:
+    """The high rules msscan raised on one file (the basis shown for a non-payload alert)."""
+    for r in json.loads(corpus.read_text())["rows"]:
+        if r["id"] == fid:
+            return list(r["msscan"]["rules_high"])
+    return []
+
+
 def main() -> None:
     ap = argparse.ArgumentParser(description=__doc__)
     ap.add_argument("--data", type=Path, required=True)
     ap.add_argument("--review", type=Path, default=Path("benchmarks/results/hf_review.json"))
+    ap.add_argument("--corpus", type=Path, default=Path("benchmarks/results/hf_corpus.json"))
     ap.add_argument("--out", type=Path, default=Path("benchmarks/results/hf_hub_status"))
     args = ap.parse_args()
 
     review = json.loads(args.review.read_text())
-    payload = {r["id"]: r["basis"] for r in review["rows"] if r["label"] == "payload"}
+    labels = {r["id"]: r["label"] for r in review["rows"]}
+    high = {
+        r["id"]
+        for r in json.loads(args.corpus.read_text())["rows"]
+        if r["msscan"]["flags"]["default"]
+    }
+    # Every payload file, and every other file msscan rates high, so that each alert a user
+    # would see has the Hub's own verdict next to it.
+    payload = {
+        r["id"]: r["basis"] or ", ".join(by_id_rules(args.corpus, r["id"]))
+        for r in review["rows"]
+        if r["label"] == "payload" or r["id"] in high
+    }
     private = {}
     with (args.data / "private" / "hf_private_rows.jsonl").open() as fh:
         for line in fh:
@@ -106,8 +127,9 @@ def main() -> None:
             {
                 "id": fid,
                 "repository": repo_ids.setdefault(repo, len(repo_ids) + 1),
+                "label": labels[fid],
                 "basis": payload[fid],
-                "msscan": "high",
+                "msscan": "high" if fid in high else "below high",
                 "hub_status": hub["status"],
                 "hub_scanners": hub["scanners"],
                 "hub_flags_it": hub["status"] in FLAGGED,
@@ -116,20 +138,33 @@ def main() -> None:
             }
         )
 
-    not_flagged = [r for r in rows if not r["hub_flags_it"]]
+    attacks = [r for r in rows if r["label"] == "payload"]
+    others = [r for r in rows if r["label"] != "payload"]
+    not_flagged = [r for r in attacks if not r["hub_flags_it"]]
     summary = {
         "checked_on": datetime.date.today().isoformat(),
-        "payload_files": len(rows),
-        "repositories": len(repo_ids),
-        "hub_status": dict(Counter(r["hub_status"] for r in rows)),
-        "flagged_by_the_hub": sum(r["hub_flags_it"] for r in rows),
+        "payload_files": len(attacks),
+        "repositories": len({r["repository"] for r in attacks}),
+        "hub_status": dict(Counter(r["hub_status"] for r in attacks)),
+        "flagged_by_the_hub": sum(r["hub_flags_it"] for r in attacks),
         "not_flagged_by_the_hub": len(not_flagged),
         "in_repositories_presenting_as_security_tests": sum(
-            r["presents_as_security_test"] for r in rows
+            r["presents_as_security_test"] for r in attacks
         ),
         "neither_flagged_nor_a_declared_test": sum(
             not r["presents_as_security_test"] for r in not_flagged
         ),
+        "other_high_alerts": {
+            "files": len(others),
+            "by_label": dict(Counter(r["label"] for r in others)),
+            "flagged_by_the_hub": sum(r["hub_flags_it"] for r in others),
+            "in_repositories_presenting_as_security_tests": sum(
+                r["presents_as_security_test"] for r in others
+            ),
+            "in_repositories_that_also_hold_a_payload_file": sum(
+                r["repository"] in {a["repository"] for a in attacks} for r in others
+            ),
+        },
         "note": (
             "A discovery would be a payload file that the Hub does not flag and that is not in "
             "a repository presenting itself as a security test. Statuses are a snapshot of the "
@@ -141,9 +176,14 @@ def main() -> None:
         json.dumps({"summary": summary, "rows": rows}, indent=1) + "\n"
     )
     print(json.dumps(summary, indent=1))
-    for r in not_flagged:
+    for r in not_flagged + others:
         print(
-            r["id"], r["basis"], r["hub_status"], r["hub_scanners"], r["presents_as_security_test"]
+            r["id"],
+            r["label"],
+            r["basis"],
+            r["hub_status"],
+            r["hub_scanners"],
+            r["presents_as_security_test"],
         )
 
 

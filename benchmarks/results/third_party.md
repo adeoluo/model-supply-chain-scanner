@@ -14,4 +14,4 @@ Versions: msscan 0.1.1 picklescan 1.0.5 modelscan 0.8.8 fickling 0.1.13 modelaud
 | False positive rate (benign) | 37 | 0/37 = 0.000 (0.000 to 0.094) | 7/37 = 0.189 (0.095 to 0.342) | 0/37 = 0.000 (0.000 to 0.094) | 2/37 = 0.054 (0.015 to 0.177) | 0/37 = 0.000 (0.000 to 0.094) | 6/37 = 0.162 (0.077 to 0.311) | 0/37 = 0.000 (0.000 to 0.094) | 8/37 = 0.216 (0.114 to 0.372) | 3/37 = 0.081 (0.028 to 0.213) |
 
 | Files not scanned or with errors | | 0 | 0 | 6 | 6 | 57 | 51 | 51 | 7 | 7 |
-| Wall time (s, one process, includes imports) | | 0.1 | 0.1 | 0.3 | 0.3 | 0.2 | 2.0 | 2.0 | 21.5 | 21.5 |
+| Wall time (s, one process, includes imports) | | 0.1 | 0.1 | 0.3 | 0.3 | 0.2 | 2.1 | 2.1 | 23.5 | 23.5 |

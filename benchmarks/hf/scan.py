@@ -49,6 +49,11 @@ def main() -> None:
     ap.add_argument("--data", type=Path, required=True)
     ap.add_argument("--out", type=Path, required=True)
     ap.add_argument("--tools", default="picklescan,modelscan,fickling,modelaudit")
+    ap.add_argument(
+        "--reuse-others",
+        action="store_true",
+        help="rescan with msscan only and keep the other tools' stored verdicts for the same files",
+    )
     args = ap.parse_args()
     priv = args.data / "private"
     salt = (priv / "salt").read_text().strip()
@@ -115,7 +120,21 @@ def main() -> None:
     work = args.data / "compare-work"
     work.mkdir(exist_ok=True)
     tool_meta = {}
-    for tool in args.tools.split(","):
+    if args.reuse_others:
+        # The other tools did not change, so their verdicts on the same stored files stand.
+        before = json.loads(Path(f"{args.out}.json").read_text())
+        old_rows = {r["id"]: r for r in before["rows"]}
+        old_priv = {}
+        for line in (priv / "hf_private_rows.jsonl").open():
+            d = json.loads(line)
+            old_priv[d["id"]] = d
+        tool_meta = before["tools"]
+        for i, _ in others:
+            fid = rows[i]["id"]
+            for tool in tool_meta:
+                rows[i][tool] = old_rows[fid][tool]
+                private_rows[i][tool] = old_priv[fid][tool]
+    for tool in [] if args.reuse_others else args.tools.split(","):
         res = run_tool(tool, [p for _, p in others], work / f"hf-{tool}.txt")
         wall = res.pop("__wall__")["seconds"]
         tool_meta[tool] = {"wall_seconds": round(wall, 1), "files": len(others)}
@@ -147,7 +166,7 @@ def summarize(rows: list[dict[str, Any]]) -> dict[str, Any]:
     flagged = Counter()
     rules = Counter()
     for r in rows:
-        for t in ("msscan", "picklescan", "modelscan", "fickling"):
+        for t in ("msscan", "picklescan", "modelscan", "fickling", "modelaudit"):
             for v, f in r.get(t, {}).get("flags", {}).items():
                 if f:
                     flagged[f"{t}:{v}:{r['kind']}"] += 1

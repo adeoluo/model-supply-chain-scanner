@@ -81,7 +81,7 @@ hf-heldout: ## Draw, fetch, scan and cross-check a second Hub sample of the newe
 	$(BENCH) benchmarks/hf/collect.py fetch --data $(DATA)/hf_heldout --per-kind 2
 	$(BENCH) benchmarks/hf/scan.py --data $(DATA)/hf_heldout --out benchmarks/results/hf_heldout
 	$(BENCH) benchmarks/hf/review.py --data $(DATA)/hf_heldout --corpus benchmarks/results/hf_heldout.json --out benchmarks/results/hf_heldout_review
-	$(BENCH) benchmarks/hf/hub_status.py --data $(DATA)/hf_heldout --review benchmarks/results/hf_heldout_review.json --out benchmarks/results/hf_heldout_hub_status
+	$(BENCH) benchmarks/hf/hub_status.py --data $(DATA)/hf_heldout --review benchmarks/results/hf_heldout_review.json --corpus benchmarks/results/hf_heldout.json --out benchmarks/results/hf_heldout_hub_status
 
 hf-status: ## Ask the Hub what its own scanners say about the payload files (benchmarks/results/hf_hub_status.json)
 	$(BENCH) benchmarks/hf/hub_status.py --data $(DATA)/hf --out benchmarks/results/hf_hub_status

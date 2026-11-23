@@ -38,4 +38,4 @@ Versions: msscan 0.1.1 picklescan 1.0.5 modelscan 0.8.8 fickling 0.1.13 modelaud
 | False positive rate (benign) | 91 | 0/91 = 0.000 (0.000 to 0.041) | 1/91 = 0.011 (0.002 to 0.060) | 0/91 = 0.000 (0.000 to 0.041) | 23/91 = 0.253 (0.175 to 0.351) | 0/91 = 0.000 (0.000 to 0.041) | 32/91 = 0.352 (0.261 to 0.454) | 5/91 = 0.055 (0.024 to 0.122) | 56/91 = 0.615 (0.513 to 0.709) | 52/91 = 0.571 (0.469 to 0.668) |
 
 | Files not scanned or with errors | | 0 | 0 | 12 | 12 | 107 | 108 | 108 | 16 | 16 |
-| Wall time (s, one process, includes imports) | | 0.1 | 0.1 | 0.2 | 0.2 | 0.2 | 1.2 | 1.2 | 61.3 | 61.3 |
+| Wall time (s, one process, includes imports) | | 0.2 | 0.2 | 0.3 | 0.3 | 0.3 | 1.8 | 1.8 | 64.4 | 64.4 |

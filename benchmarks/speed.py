@@ -20,6 +20,7 @@ import re
 import statistics
 import subprocess
 import sys
+import tempfile
 import time
 from pathlib import Path
 from typing import Any
@@ -113,9 +114,12 @@ def tree_rss(pid: int) -> int:
 
 def timed(cmd: list[str], max_rss: int, max_seconds: float) -> tuple[float, int, str]:
     """(wall seconds, peak RSS bytes, status) of one run; status is ok, memory or time."""
-    with subprocess.Popen(
-        ["/usr/bin/time", "-l", *cmd], stdout=subprocess.DEVNULL, stderr=subprocess.PIPE, text=True
-    ) as p:
+    # The tool's own stderr goes to a file: a pipe that nobody reads during the run fills up and
+    # blocks a tool that logs a lot, which would be recorded as a timeout it did not earn.
+    with (
+        tempfile.TemporaryFile("w+") as log,
+        subprocess.Popen(["/usr/bin/time", "-l", *cmd], stdout=subprocess.DEVNULL, stderr=log) as p,
+    ):
         t0, status = time.monotonic(), "ok"
         while p.poll() is None:
             time.sleep(0.1)
@@ -130,7 +134,8 @@ def timed(cmd: list[str], max_rss: int, max_seconds: float) -> tuple[float, int,
                     os.kill(int(line), 9)
                 p.wait()
                 return time.monotonic() - t0, max_rss, status
-        err = p.stderr.read() if p.stderr else ""
+        log.seek(0)
+        err = log.read()
     rss = int(re.search(r"(\d+)\s+maximum resident set size", err).group(1))  # type: ignore[union-attr]
     real = float(re.search(r"([\d.]+) real", err).group(1))  # type: ignore[union-attr]
     return real, rss, "ok"
