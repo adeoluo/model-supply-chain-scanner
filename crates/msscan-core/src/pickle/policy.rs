@@ -216,9 +216,15 @@ const DANGEROUS_MODULES: &[&str] = &[
     "numpy.testing",
     "torch.hub",
     "torch.utils.cpp_extension",
+    "torch.utils.collect_env",
+    "torch.utils.bottleneck",
+    "torch.utils.benchmark",
+    "torch.utils.model_zoo",
+    "torch.utils.file_baton",
     "torch.package",
     "torch._dynamo",
     "torch._inductor",
+    "torch.multiprocessing",
     // torch.distributed itself (process groups, send and recv) and the parts that run commands,
     // remote calls or file I/O; tensor, device mesh and placement classes stay library code.
     "torch.distributed.rpc",
@@ -231,8 +237,21 @@ const DANGEROUS_MODULES: &[&str] = &[
     "torch.ops",
     "torch._ops",
     "pandas.io.pickle",
+    "pandas.io.clipboard",
     "keras.utils.generic_utils",
     "tensorflow.python.ops.script_ops",
+    "tensorflow.io.gfile",
+    "pydoc",
+    "doctest",
+    "idlelib",
+    "tkinter",
+    "turtle",
+    "logging.config",
+    "ctypes.util",
+    "sysconfig",
+    "_sysconfigdata",
+    "uu",
+    "quopri",
     "jinja2",
     "yaml",
     "mmap",
@@ -268,7 +287,11 @@ const DANGEROUS_NAMES: &[(&str, &str)] = &[
     ("_operator", "methodcaller"),
     ("_operator", "call"),
     ("functools", "reduce"),
+    ("functools", "partial"),
+    ("functools", "partialmethod"),
     ("_functools", "reduce"),
+    ("_functools", "partial"),
+    ("typing", "_eval_type"),
     ("copyreg", "add_extension"),
     ("copyreg", "_extension_registry"),
     ("numpy", "load"),
@@ -461,6 +484,35 @@ pub fn classify(module: &str, name: &str) -> Tier {
     if module == "torch" && TORCH_STORAGES.contains(&name) {
         return Tier::Safe;
     }
+    // Helper, CLI, script, or command-runner submodules inside broad ML namespaces (e.g.
+    // `torch.utils.collect_env.run`, `transformers.commands.*`) should not be downgraded to Low:
+    // keep known model/tensor submodules as `Library` and flag command/exec-named callables.
+    let lower_name = name.to_ascii_lowercase();
+    if matches!(
+        lower_name.as_str(),
+        "system"
+            | "popen"
+            | "spawn"
+            | "run_command"
+            | "run_cmd"
+            | "shell"
+            | "check_output"
+            | "check_call"
+            | "getoutput"
+            | "getstatusoutput"
+            | "pipepager"
+            | "tempfilepager"
+    ) {
+        return Tier::Dangerous;
+    }
+    if module.split('.').any(|seg| {
+        matches!(
+            seg,
+            "cli" | "commands" | "scripts" | "testing" | "tests" | "benchmark" | "benchmarks"
+        )
+    }) {
+        return Tier::Unknown;
+    }
     if LIBRARY_PREFIXES.iter().any(|p| in_module(module, p)) {
         return Tier::Library;
     }
@@ -512,6 +564,17 @@ mod tests {
         assert_eq!(classify("torch.distributed.rpc", "rpc_sync"), Tier::Dangerous);
         assert_eq!(classify("torch.distributed.tensor", "DTensor"), Tier::Library);
         assert_eq!(classify("torch.distributed.device_mesh", "DeviceMesh"), Tier::Library);
+        assert_eq!(classify("torch.utils.collect_env", "run"), Tier::Dangerous);
+        assert_eq!(classify("functools", "partial"), Tier::Dangerous);
+        assert_eq!(classify("_functools", "partial"), Tier::Dangerous);
+        assert_eq!(classify("pydoc", "pipepager"), Tier::Dangerous);
+        assert_eq!(classify("pydoc", "locate"), Tier::Dangerous);
+        assert_eq!(classify("logging.config", "dictConfig"), Tier::Dangerous);
+        assert_eq!(classify("typing", "_eval_type"), Tier::Dangerous);
+        assert_eq!(
+            classify("transformers.commands.env", "EnvironmentCommand"),
+            Tier::Unknown
+        );
     }
 
     #[test]
