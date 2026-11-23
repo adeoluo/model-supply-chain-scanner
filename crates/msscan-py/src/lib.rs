@@ -99,6 +99,19 @@ fn rules_markdown() -> String {
     report::rules_markdown()
 }
 
+/// How the pickle policy treats one global: its tier, and why calling it is refused (if it is).
+#[pyfunction]
+fn explain_global(module: &str, name: &str) -> (String, Option<String>) {
+    use msscan_core::pickle::policy::{Tier, call_risk, classify};
+    let tier = match classify(module, name) {
+        Tier::Safe => "safe",
+        Tier::Library => "library",
+        Tier::Unknown => "unknown",
+        Tier::Dangerous => "dangerous",
+    };
+    (tier.to_string(), call_risk(module, name).map(str::to_string))
+}
+
 /// Run the HTTP service until the process is stopped.
 #[pyfunction]
 #[pyo3(signature = (addr="127.0.0.1:8080", max_body=512 << 20, threads=4))]
@@ -121,6 +134,7 @@ fn msscan_rs(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(render, m)?)?;
     m.add_function(wrap_pyfunction!(rules, m)?)?;
     m.add_function(wrap_pyfunction!(rules_markdown, m)?)?;
+    m.add_function(wrap_pyfunction!(explain_global, m)?)?;
     m.add_function(wrap_pyfunction!(serve, m)?)?;
     m.add("__version__", env!("CARGO_PKG_VERSION"))?;
     Ok(())

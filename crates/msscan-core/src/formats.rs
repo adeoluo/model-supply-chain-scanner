@@ -3,7 +3,7 @@
 use crate::compress;
 use crate::finding::{Finding, ids};
 use crate::scan::{self, Ctx};
-use crate::{gguf, hfjson, keras, numpy, onnx, pickle, safetensors, savedmodel, zip};
+use crate::{archive, gguf, hfjson, keras, numpy, onnx, pickle, safetensors, savedmodel, textcfg, zip};
 
 fn base_name(name: &str) -> String {
     name.rsplit(['/', '\\']).next().unwrap_or(name).to_ascii_lowercase()
@@ -13,8 +13,16 @@ fn base_name(name: &str) -> String {
 /// separately because protocol 0 has no header).
 pub fn sniff(data: &[u8], name: &str) -> Option<&'static str> {
     let base = base_name(name);
-    if zip::is_zip(data) {
+    if is_appledouble(data) {
+        Some("appledouble")
+    } else if zip::is_zip(data) {
         Some("zip")
+    } else if archive::is_7z(data) {
+        Some("7z")
+    } else if archive::is_rar(data) {
+        Some("rar")
+    } else if archive::is_tar(data) {
+        Some("tar")
     } else if numpy::is_npy(data) {
         Some("numpy")
     } else if gguf::is_gguf(data) {
@@ -33,9 +41,19 @@ pub fn sniff(data: &[u8], name: &str) -> Option<&'static str> {
         Some("onnx")
     } else if hfjson::looks_like_json(data) {
         Some("json")
+    } else if textcfg::is_template_name(name) && textcfg::looks_like_text(data) && !pickle::is_pickle(data) {
+        Some("template")
+    } else if textcfg::is_yaml_name(name) && textcfg::looks_like_text(data) && !pickle::is_pickle(data) {
+        Some("yaml")
     } else {
         None
     }
+}
+
+/// The AppleDouble file macOS writes next to a file on foreign volumes (`._name`): resource
+/// fork metadata that takes the name and extension of the real file.
+pub fn is_appledouble(data: &[u8]) -> bool {
+    data.starts_with(&[0x00, 0x05, 0x16, 0x07])
 }
 
 /// Detect the format of `data` and run the matching analyzer.
@@ -47,6 +65,44 @@ pub(crate) fn dispatch(ctx: &mut Ctx, data: &[u8], member: &str, depth: u8) -> S
     };
     match sniff(data, member) {
         Some("zip") => scan::scan_zip(ctx, data, member, depth),
+        Some("appledouble") => {
+            ctx.findings.push(Finding::new(
+                ids::FORMAT_UNKNOWN,
+                "macOS AppleDouble metadata, not a model file",
+                member,
+            ));
+            "appledouble".into()
+        }
+        Some("7z") => scan::scan_container(
+            ctx,
+            archive::read_7z(data, ctx.opts.max_decompressed, member),
+            "7z",
+            member,
+            depth,
+        ),
+        Some("tar") => scan::scan_container(
+            ctx,
+            archive::read_tar(data, ctx.opts.max_decompressed, member),
+            "tar",
+            member,
+            depth,
+        ),
+        Some("rar") => {
+            ctx.findings.push(Finding::new(
+                ids::ARCHIVE_MALFORMED,
+                "RAR archives are not opened; the content was not scanned",
+                member,
+            ));
+            "rar".into()
+        }
+        Some("template") => {
+            ctx.findings.extend(textcfg::check_template(data, member));
+            "jinja-template".into()
+        }
+        Some("yaml") => {
+            ctx.findings.extend(textcfg::check_yaml(data, member));
+            "yaml".into()
+        }
         Some("numpy") => scan::scan_npy(ctx, data, member),
         Some("compressed") => {
             let codec = compress::detect(data).expect("sniffed");

@@ -170,6 +170,10 @@ fn expected_format(name: &str) -> Option<&'static str> {
         "keras" => "zip",
         "onnx" => "onnx",
         "json" => "json",
+        "7z" => "7z",
+        "tar" | "nemo" => "tar",
+        "yaml" | "yml" => "yaml",
+        "jinja" | "jinja2" | "j2" => "jinja-template",
         _ => return None,
     })
 }
@@ -202,7 +206,12 @@ pub(crate) fn scan_buffer(ctx: &mut Ctx, data: &[u8], member: &str, depth: u8) -
     {
         let got = family(&format);
         let compressed_pickle = want == "pickle" && format.contains('+');
-        if want != got && format != "unknown" && !(want == "json" && got == "hf-config") && !compressed_pickle {
+        if want != got
+            && format != "unknown"
+            && format != "appledouble"
+            && !(want == "json" && got == "hf-config")
+            && !compressed_pickle
+        {
             ctx.findings.push(Finding::new(
                 ids::FORMAT_MISMATCH,
                 format!("the name suggests {want} but the content is {format}"),
@@ -377,6 +386,27 @@ pub(crate) fn scan_zip(ctx: &mut Ctx, data: &[u8], member: &str, depth: u8) -> S
         scan_member(ctx, &body, &sub, depth + 1);
     }
     format.into()
+}
+
+/// Scan the members of a 7z or tar container that the archive module already read.
+pub(crate) fn scan_container(
+    ctx: &mut Ctx,
+    listing: crate::archive::Listing,
+    kind: &str,
+    member: &str,
+    depth: u8,
+) -> String {
+    ctx.findings.extend(listing.findings);
+    ctx.stats.archive_entries += listing.entries;
+    for m in &listing.members {
+        let sub = format!("{member}/{}", m.name);
+        if pickle::has_pickle_extension(&m.name) {
+            scan_buffer(ctx, &m.data, &sub, depth + 1);
+        } else {
+            scan_member(ctx, &m.data, &sub, depth + 1);
+        }
+    }
+    kind.into()
 }
 
 /// Scan an archive member: only formats recognized by content, so raw data stays quiet.

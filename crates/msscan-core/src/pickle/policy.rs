@@ -1,5 +1,6 @@
 //! Classification of pickle globals: allowlist, denylist, library namespaces and nested loaders.
 
+use super::stdlib;
 use serde::{Deserialize, Serialize};
 
 /// How a `module.name` global is classified.
@@ -141,6 +142,28 @@ const TORCH_STORAGES: &[&str] = &[
 
 /// Modules where every name is dangerous.
 const DANGEROUS_MODULES: &[&str] = &[
+    "aiohttp",
+    "websocket",
+    "websockets",
+    "paramiko",
+    "pycurl",
+    "httplib2",
+    "boto3",
+    "botocore",
+    "grpc",
+    "zmq",
+    "pexpect",
+    "sh",
+    "plumbum",
+    "fabric",
+    "invoke",
+    "psutil",
+    "docker",
+    "kubernetes",
+    "win32api",
+    "win32process",
+    "winreg",
+    "_winreg",
     "os",
     "posix",
     "nt",
@@ -733,6 +756,192 @@ pub fn classify(module: &str, name: &str) -> Tier {
         return Tier::Library;
     }
     Tier::Unknown
+}
+
+/// Standard-library callables that only rebuild plain values and are allowed to be called.
+/// Everything else in the standard library is refused when a pickle calls it (see `call_risk`).
+const STDLIB_CALL_OK: &[(&str, &str)] = &[
+    ("re", "_compile"),
+    ("codecs", "encode"),
+    ("codecs", "decode"),
+    ("_codecs", "decode"),
+    ("copyreg", "__newobj_ex__"),
+    ("copyreg", "__reduce_ex__"),
+    ("copy_reg", "__newobj__"),
+    ("array", "array"),
+    ("array", "_array_reconstructor"),
+    ("time", "struct_time"),
+    ("zoneinfo", "ZoneInfo"),
+    ("collections", "ChainMap"),
+    ("collections", "UserDict"),
+    ("collections", "UserList"),
+    ("collections", "UserString"),
+    ("collections.abc", "Mapping"),
+    ("_collections_abc", "Mapping"),
+];
+
+/// Standard-library modules whose classes hold plain data: constructing one has no side effect.
+const STDLIB_DATA_MODULES: &[&str] = &[
+    "datetime",
+    "decimal",
+    "fractions",
+    "numbers",
+    "enum",
+    "typing",
+    "pathlib",
+    "ipaddress",
+    "uuid",
+    "string",
+    "dataclasses",
+    "zoneinfo",
+];
+
+/// Function-style names that libraries use to rebuild objects from pickled state.
+const REBUILD_MARKERS: &[&str] = &[
+    "rebuild",
+    "reconstruct",
+    "unpickle",
+    "_new_",
+    "newobj",
+    "__reduce",
+    "_from_state",
+    "_restore",
+    "_ctor",
+];
+
+/// Lower-case names inside library namespaces that are classes, checked in the library sources.
+const LOWERCASE_CLASSES: &[(&str, &str)] = &[
+    ("scipy.sparse", "csr_matrix"),
+    ("scipy.sparse", "csc_matrix"),
+    ("scipy.sparse", "coo_matrix"),
+    ("scipy.sparse", "bsr_matrix"),
+    ("scipy.sparse", "dia_matrix"),
+    ("scipy.sparse", "dok_matrix"),
+    ("scipy.sparse", "lil_matrix"),
+    ("scipy.sparse", "csr_array"),
+    ("scipy.sparse", "csc_array"),
+    ("scipy.sparse", "coo_array"),
+    ("scipy.sparse", "bsr_array"),
+    ("scipy.sparse", "dia_array"),
+    ("scipy.sparse", "dok_array"),
+    ("scipy.sparse", "lil_array"),
+    ("sklearn.compose", "make_column_selector"),
+    ("torch", "device"),
+    ("torch", "dtype"),
+    ("torch", "layout"),
+    ("torch", "memory_format"),
+    ("numpy", "generic"),
+    ("numpy", "number"),
+    ("numpy", "float16"),
+    ("numpy", "float32"),
+    ("numpy", "float64"),
+    ("numpy", "int8"),
+    ("numpy", "int16"),
+    ("numpy", "int32"),
+    ("numpy", "int64"),
+    ("numpy", "uint8"),
+    ("numpy", "uint16"),
+    ("numpy", "uint32"),
+    ("numpy", "uint64"),
+    ("numpy", "complex64"),
+    ("numpy", "complex128"),
+    ("numpy", "str_"),
+    ("numpy", "bytes_"),
+    ("numpy", "object_"),
+    ("numpy", "datetime64"),
+    ("numpy", "timedelta64"),
+    ("numpy", "longdouble"),
+    ("numpy", "matrix"),
+    ("numpy", "recarray"),
+    ("numpy", "record"),
+    ("numpy", "memmap"),
+];
+
+/// A name written like a class (`Linear`, `_Real`, `Outer.Inner`), as opposed to a function.
+fn class_like(component: &str) -> bool {
+    component
+        .trim_start_matches('_')
+        .chars()
+        .next()
+        .is_some_and(|c| c.is_ascii_uppercase())
+}
+
+/// Why calling a global that is neither allowlisted nor denylisted is still refused.
+///
+/// Ordinary checkpoints rebuild objects: they call classes and a few rebuild helpers. Across the
+/// 7,563 Hub files without an attack, no pickle called a method through an attribute path, a
+/// standard-library function outside the list above, or a library function that was not a
+/// rebuild helper. Published scanner bypasses are almost all one of those three shapes, so the
+/// shape is refused instead of listing each function after someone reports it.
+pub fn call_risk(module: &str, name: &str) -> Option<&'static str> {
+    let module = module.trim();
+    let name = name.trim();
+    match classify(module, name) {
+        Tier::Safe | Tier::Dangerous => return None,
+        Tier::Library | Tier::Unknown => {}
+    }
+    let last = name.rsplit('.').next().unwrap_or(name);
+    if name.contains('.') && !name.split('.').all(class_like) {
+        return Some("a method reached through an attribute path, which object reconstruction never needs");
+    }
+    if stdlib::is_stdlib(module) {
+        if STDLIB_CALL_OK.iter().any(|(m, n)| *m == module && *n == name) {
+            return None;
+        }
+        let top = module.split('.').next().unwrap_or(module);
+        if STDLIB_DATA_MODULES.contains(&top) && class_like(last) {
+            return None;
+        }
+        return Some("a standard-library callable outside the short list that rebuilds plain values");
+    }
+    if LIBRARY_PREFIXES.iter().any(|p| in_module(module, p)) && !class_like(last) {
+        let lower = last.to_ascii_lowercase();
+        if REBUILD_MARKERS.iter().any(|m| lower.contains(m))
+            || LOWERCASE_CLASSES
+                .iter()
+                .any(|(m, n)| in_module(module, m) && *n == name)
+        {
+            return None;
+        }
+        return Some("a library function that is neither a class nor a rebuild helper");
+    }
+    None
+}
+
+/// How risky it is for a config to name `target` (a dotted path) as the callable to instantiate.
+///
+/// Configs name loaders and classes all the time, so library loaders are not reported here; what
+/// is reported is a target that runs commands or code, or a standard-library callable that
+/// builds no model object.
+pub fn config_target_risk(target: &str) -> Option<(crate::finding::Severity, &'static str)> {
+    use crate::finding::Severity;
+    let (module, name) = target.trim().rsplit_once('.')?;
+    if matches!(module, "os.path" | "posixpath" | "ntpath") {
+        return None;
+    }
+    let top = module.split('.').next().unwrap_or(module);
+    let library = !stdlib::is_stdlib(module) && LIBRARY_PREFIXES.iter().any(|p| in_module(module, p));
+    let listed = DANGEROUS_NAMES.iter().any(|(m, n)| *m == module && *n == name)
+        || DANGEROUS_MODULES.iter().any(|m| in_module(module, m));
+    if listed {
+        return Some(if matches!(top, "functools" | "operator") {
+            (Severity::Medium, "wraps another callable chosen by the config")
+        } else if library {
+            (Severity::High, "loads code or remote files")
+        } else {
+            (
+                Severity::Critical,
+                "runs commands or code, or reaches files or the network",
+            )
+        });
+    }
+    if stdlib::is_stdlib(module) && call_risk(module, name).is_some() {
+        return Some((
+            Severity::High,
+            "is a standard-library callable that builds no model object",
+        ));
+    }
+    None
 }
 
 /// Whether calling this global deserializes a nested payload.

@@ -204,9 +204,13 @@ fn nested_pickle_loads_is_scanned() {
     let nested: Vec<_> = r
         .findings
         .iter()
-        .filter(|f| f.location.contains(">pickle.loads"))
+        .filter(|f| f.location.contains(">raw-pickle"))
         .collect();
     assert!(!nested.is_empty());
+    // The constant is reported once as an embedded payload; the loader call refers to it.
+    assert!(rules(&r).contains(&ids::PICKLE_EMBEDDED_PAYLOAD));
+    let inner_calls = r.findings.iter().filter(|f| f.message == "calls os.getcwd").count();
+    assert_eq!(inner_calls, 1, "{:?}", r.findings);
     assert_eq!(worst(&r), Severity::Critical);
 }
 
@@ -505,5 +509,176 @@ mod props {
             let d = P::new(2).global(m, &name).op(b")R").stop();
             prop_assert_eq!(run(&d).max_severity(), Some(Severity::Critical));
         }
+    }
+}
+
+/// REDUCE of `module.name` with one string argument, protocol 4 (so dotted names resolve).
+fn call(module: &str, name: &str) -> Vec<u8> {
+    P::new(4).stack_global(module, name).s("arg").op(&[0x85, b'R']).stop()
+}
+
+#[test]
+fn calls_that_reconstruction_does_not_need_are_refused() {
+    // Published bypass gadgets that are in no denylist here: caught by their shape.
+    for (module, name, why) in [
+        ("uuid", "_get_command_stdout", "standard-library"),
+        ("_aix_support", "_read_cmd_output", "standard-library"),
+        ("lib2to3.pgen2.grammar", "Grammar.loads", "attribute path"),
+        ("logging", "FileHandler", "standard-library"),
+        ("ssl", "get_server_certificate", "standard-library"),
+        ("test.support.script_helper", "assert_python_ok", "standard-library"),
+        ("builtins", "print", "standard-library"),
+        ("torch.jit.unsupported_tensor_ops", "execWrapper", "library function"),
+        (
+            "torch.utils.data.datapipes.utils.decoder",
+            "basichandlers",
+            "library function",
+        ),
+        (
+            "torch.utils._config_module",
+            "ConfigModule.load_config",
+            "attribute path",
+        ),
+        (
+            "torch.fx.experimental.symbolic_shapes",
+            "ShapeEnv.evaluate_guards_expression",
+            "attribute path",
+        ),
+        ("some_unknown_pkg.mod", "Helper.run_it", "attribute path"),
+    ] {
+        let r = run(&call(module, name));
+        let f = r
+            .findings
+            .iter()
+            .find(|f| f.rule == ids::PICKLE_NON_CONSTRUCTOR_CALL)
+            .unwrap_or_else(|| panic!("{module}.{name}: {:?}", r.findings));
+        assert_eq!(f.severity, Severity::High);
+        assert!(f.message.contains(why), "{module}.{name}: {}", f.message);
+        assert!(worst(&r) >= Severity::High);
+    }
+    // The same shapes when the global is only referenced are not calls.
+    let referenced = P::new(4).stack_global("uuid", "_get_command_stdout").stop();
+    assert!(!rules(&run(&referenced)).contains(&ids::PICKLE_NON_CONSTRUCTOR_CALL));
+}
+
+#[test]
+fn ordinary_reconstruction_calls_are_not_refused() {
+    for (module, name) in [
+        ("re", "_compile"),
+        ("pathlib", "PosixPath"),
+        ("datetime", "datetime"),
+        ("enum", "IntFlag"),
+        ("typing", "Any"),
+        ("collections", "ChainMap"),
+        ("pandas.core.indexes.base", "_new_Index"),
+        ("pandas._libs.internals", "_unpickle_block"),
+        ("torch._utils", "_rebuild_wrapper_subclass"),
+        ("numpy.ma.core", "_mareconstruct"),
+        ("sklearn._loss._loss", "__pyx_unpickle_CyHalfSquaredError"),
+        ("sklearn.neighbors._kd_tree", "newObj"),
+        ("scipy.sparse._csr", "csr_matrix"),
+        ("sklearn.compose._column_transformer", "make_column_selector"),
+        ("sklearn.linear_model._logistic", "LogisticRegression"),
+        ("torch.nn.modules.container", "Sequential"),
+        ("torch.distributions.constraints", "_Real"),
+        ("transformers.models.bert.modeling_bert", "BertModel.Config"),
+        ("my_project.models", "Net"),
+        ("my_project.models", "build_net"),
+    ] {
+        assert_eq!(policy::call_risk(module, name), None, "{module}.{name}");
+        let r = run(&call(module, name));
+        assert!(worst(&r) < Severity::High, "{module}.{name}: {:?}", r.findings);
+    }
+    // Allowlisted and denylisted globals keep their own rules.
+    assert_eq!(policy::call_risk("collections", "OrderedDict"), None);
+    assert_eq!(policy::call_risk("os", "system"), None);
+    assert!(rules(&run(&call("os", "system"))).contains(&ids::PICKLE_DANGEROUS_CALL));
+}
+
+#[test]
+fn payloads_hidden_in_constants() {
+    let inner = P::new(4)
+        .stack_global("builtins", "print")
+        .s("staged")
+        .op(&[0x85, b'R'])
+        .stop();
+    let b64 = {
+        const T: &[u8; 64] = b"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
+        let mut out = String::new();
+        for c in inner.chunks(3) {
+            let n = (u32::from(c[0]) << 16)
+                | (u32::from(*c.get(1).unwrap_or(&0)) << 8)
+                | u32::from(*c.get(2).unwrap_or(&0));
+            for i in 0..4 {
+                if i <= c.len() {
+                    out.push(T[((n >> (18 - 6 * i)) & 63) as usize] as char);
+                } else {
+                    out.push('=');
+                }
+            }
+        }
+        out
+    };
+    let hex: String = inner.iter().map(|b| format!("{b:02x}")).collect();
+    // A dict value that is a pickle: raw bytes, base64 text and hex text.
+    for (label, constant) in [
+        ("raw", P::new(4).op(b"}").s("weights").bytes(&inner).op(b"s").stop()),
+        ("base64", P::new(4).op(b"}").s("weights").s(&b64).op(b"s").stop()),
+        ("hex", P::new(4).op(b"}").s("weights").s(&hex).op(b"s").stop()),
+    ] {
+        let r = run(&constant);
+        let f = r
+            .findings
+            .iter()
+            .find(|f| f.rule == ids::PICKLE_EMBEDDED_PAYLOAD)
+            .unwrap_or_else(|| panic!("{label}: {:?}", r.findings));
+        assert!(
+            f.severity >= Severity::High && f.message.contains(label),
+            "{}",
+            f.message
+        );
+        assert!(f.message.contains("builtins.print"));
+        assert!(r.imports.is_empty(), "the outer pickle imports nothing");
+    }
+    // Two stages: a pickle whose constant is a pickle whose constant is the payload.
+    let stage1 = P::new(4).op(b"}").s("stage2").bytes(&inner).op(b"s").stop();
+    let outer = P::new(4).op(b"}").s("blob").bytes(&stage1).op(b"s").stop();
+    assert!(rules(&run(&outer)).contains(&ids::PICKLE_EMBEDDED_PAYLOAD));
+    // A constant that is a harmless pickle (a dict of ints) is not reported.
+    let harmless = P::new(4).op(b"}").s("k").int(1).op(b"s").stop();
+    let wrap = P::new(4).op(b"}").s("blob").bytes(&harmless).op(b"s").stop();
+    assert!(run(&wrap).findings.is_empty(), "{:?}", run(&wrap).findings);
+    // Code text, plain and base64 ("os.system('echo ATTACK')").
+    for text in ["import os; os.system('echo inert')", "b3Muc3lzdGVtKCdlY2hvIEFUVEFDSycp"] {
+        let r = run(&P::new(4).op(b"}").s("note").s(text).op(b"s").stop());
+        assert_eq!(rules(&r), vec![ids::EMBEDDED_CODE], "{text}");
+        assert_eq!(worst(&r), Severity::High);
+    }
+    // Ordinary long strings stay quiet.
+    let prose = "The quick brown fox jumps over the lazy dog and keeps going for a while.";
+    assert!(
+        run(&P::new(4).op(b"}").s("doc").s(prose).op(b"s").stop())
+            .findings
+            .is_empty()
+    );
+}
+
+#[test]
+fn project_specific_dunder_attributes_are_not_injection() {
+    let build = |key: &str| {
+        P::new(2)
+            .global("collections", "OrderedDict")
+            .op(b")R}")
+            .s(key)
+            .int(1)
+            .op(b"sb")
+            .stop()
+    };
+    let r = run(&build("__setstate__"));
+    assert_eq!(worst(&r), Severity::Critical);
+    for key in ["__FILE_RESOURCE_DATA__", "__networkx_cache__"] {
+        let r = run(&build(key));
+        assert!(rules(&r).contains(&ids::PICKLE_ATTRIBUTE_INJECTION));
+        assert_eq!(worst(&r), Severity::Low, "{key}: {:?}", r.findings);
     }
 }

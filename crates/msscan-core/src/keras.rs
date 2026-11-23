@@ -5,8 +5,9 @@
 //! strings; both are found by locating `{"class_name"` objects in the raw bytes and parsing
 //! them with a string-aware brace matcher (ADR 0005).
 
-use crate::finding::{Finding, ids};
+use crate::finding::{Finding, Severity, ids};
 use crate::pickle::policy::{self, Tier};
+use crate::{payload, pycode};
 use serde_json::Value;
 
 pub const HDF5_MAGIC: &[u8] = b"\x89HDF\r\n\x1a\n";
@@ -47,7 +48,7 @@ pub fn embedded_configs(d: &[u8]) -> (Vec<Value>, usize) {
     let mut out = Vec::new();
     let mut failed = 0;
     let mut i = 0;
-    let pats: [&[u8]; 3] = [b"{\"class_name\"", b"{\"module\"", b"{ \"class_name\""];
+    let pats: [&[u8]; 4] = [b"{\"class_name\"", b"{\"module\"", b"{ \"class_name\"", b"{\"loss\""];
     while i < d.len() {
         let Some(rel) = memfind(&d[i..], b'{') else { break };
         let s = i + rel;
@@ -105,9 +106,62 @@ fn matching_brace(d: &[u8], start: usize) -> Option<usize> {
     None
 }
 
+/// What a Lambda layer's stored function can reach, judged from the names it carries.
+#[derive(Debug, Clone, PartialEq)]
+enum Lambda {
+    /// It names an import, a file, a process, the network or a reflection helper.
+    Risky(Vec<String>),
+    /// It names none of those but does something visible, such as printing.
+    Noisy(Vec<String>),
+    /// It parsed and names none of those.
+    Plain(Vec<String>),
+    /// No function was found, or it is not a code object this reader understands.
+    Opaque,
+}
+
+/// Grade the function stored in a Lambda layer config (Keras 2 and Keras 3 shapes, or source).
+fn grade_lambda(cfg: Option<&Value>) -> Lambda {
+    let function = cfg
+        .and_then(|c| c.get("function"))
+        .or_else(|| cfg.filter(|c| c.get("code").is_some()));
+    let (encoded, source) = match function {
+        // Keras 2: [base64 bytecode, defaults, closure]
+        Some(Value::Array(a)) => (a.first().and_then(Value::as_str), None),
+        // Keras 3: {"class_name": "__lambda__", "config": {"code": base64, ...}}
+        Some(Value::Object(m)) => (
+            m.get("code")
+                .or_else(|| m.get("config").and_then(|c| c.get("code")))
+                .and_then(Value::as_str),
+            None,
+        ),
+        // Source text stored in place of bytecode.
+        Some(Value::String(text)) => (None, Some(text.as_str())),
+        _ => (None, None),
+    };
+    let names = if let Some(text) = source {
+        pycode::identifiers(text)
+    } else {
+        let Some(encoded) = encoded else { return Lambda::Opaque };
+        let compact: Vec<u8> = encoded.bytes().filter(|b| !b.is_ascii_whitespace()).collect();
+        let Some(info) = payload::base64_decode(&compact).and_then(|raw| pycode::parse(&raw)) else {
+            return Lambda::Opaque;
+        };
+        info.names
+    };
+    let risky = pycode::risky_names(&names);
+    let noisy = pycode::side_effect_names(&names);
+    if !risky.is_empty() {
+        Lambda::Risky(risky)
+    } else if !noisy.is_empty() {
+        Lambda::Noisy(noisy)
+    } else {
+        Lambda::Plain(names.into_iter().take(6).collect())
+    }
+}
+
 #[derive(Default)]
 struct Walk {
-    lambdas: Vec<String>,
+    lambdas: Vec<(String, Lambda)>,
     modules: Vec<String>,
     external: Vec<String>,
     custom: Vec<String>,
@@ -129,7 +183,7 @@ fn walk(v: &Value, w: &mut Walk, depth: u32, in_lambda: bool) {
                 .to_string();
             let is_lambda = class == "Lambda" || class == "__lambda__" && !in_lambda;
             if is_lambda {
-                w.lambdas.push(name.clone());
+                w.lambdas.push((name.clone(), grade_lambda(cfg)));
             }
             if (class == "TFOpLambda" || class == "SlicingOpLambda")
                 && let Some(f) = cfg.and_then(|c| c.get("function")).and_then(Value::as_str)
@@ -164,6 +218,25 @@ fn walk(v: &Value, w: &mut Walk, depth: u32, in_lambda: bool) {
                     w.external.push(full);
                 }
             }
+            // A serialized object with no module (Keras 2 style) whose class Keras does not
+            // ship: loading needs the caller to supply it, so the file names code it does not hold.
+            if m.get("module").is_none_or(Value::is_null)
+                && cfg.is_some_and(Value::is_object)
+                && !class.is_empty()
+                && !in_lambda
+                && !crate::keras_names::is_builtin_class(class)
+                && m.get("registered_name")
+                    .and_then(Value::as_str)
+                    .is_none_or(|r| !r.contains('>'))
+            {
+                w.custom.push(class.to_string());
+            }
+            // Losses and metrics named by a plain string in the training config.
+            for key in ["loss", "metrics", "weighted_metrics"] {
+                if let Some(v) = m.get(key) {
+                    named_functions(v, &mut w.custom, 0);
+                }
+            }
             if let Some(r) = m.get("registered_name").and_then(Value::as_str)
                 && r.contains('>')
                 && m.get("module").is_none_or(Value::is_null)
@@ -175,6 +248,22 @@ fn walk(v: &Value, w: &mut Walk, depth: u32, in_lambda: bool) {
             }
         }
         Value::Array(a) => a.iter().for_each(|x| walk(x, w, depth + 1, in_lambda)),
+        _ => {}
+    }
+}
+
+/// Plain-string loss and metric names (possibly nested in lists or per-output dicts) that are
+/// not Keras built-ins.
+fn named_functions(v: &Value, out: &mut Vec<String>, depth: u32) {
+    if depth > 8 {
+        return;
+    }
+    match v {
+        Value::String(s) if !s.is_empty() && !crate::keras_names::is_builtin_function(s) => out.push(s.clone()),
+        Value::Array(a) => a.iter().for_each(|x| named_functions(x, out, depth + 1)),
+        Value::Object(m) if !m.contains_key("class_name") => {
+            m.values().for_each(|x| named_functions(x, out, depth + 1))
+        }
         _ => {}
     }
 }
@@ -200,17 +289,83 @@ pub fn check_configs(configs: &[Value], loc: &str) -> Vec<Finding> {
         walk(c, &mut w, 0, false);
     }
     let mut out = Vec::new();
-    let lambdas = dedup(w.lambdas);
+    let mut lambdas = w.lambdas;
+    lambdas.sort_by(|a, b| a.0.cmp(&b.0));
+    lambdas.dedup();
     if !lambdas.is_empty() {
-        out.push(Finding::new(
-            ids::KERAS_LAMBDA,
-            format!(
-                "{} Lambda layer(s) with serialized code: {}",
-                lambdas.len(),
-                short_list(&lambdas)
-            ),
-            loc,
-        ));
+        let names: Vec<String> = lambdas.iter().map(|(n, _)| n.clone()).collect();
+        let risky: Vec<String> = dedup(
+            lambdas
+                .iter()
+                .filter_map(|(_, g)| match g {
+                    Lambda::Risky(r) => Some(r.clone()),
+                    _ => None,
+                })
+                .flatten()
+                .collect(),
+        );
+        let opaque = lambdas.iter().filter(|(_, g)| *g == Lambda::Opaque).count();
+        let noisy: Vec<String> = dedup(
+            lambdas
+                .iter()
+                .filter_map(|(_, g)| match g {
+                    Lambda::Noisy(n) => Some(n.clone()),
+                    _ => None,
+                })
+                .flatten()
+                .collect(),
+        );
+        // The bytecode can only reach what it names, so the names decide the severity: critical
+        // when it imports, reflects or touches files or processes; high when it could not be
+        // read or does something visible that tensor code does not need (printing); medium when
+        // it was read and names nothing of the kind.
+        let (severity, detail) = if !risky.is_empty() {
+            (Severity::Critical, format!("the bytecode uses {}", risky.join(", ")))
+        } else if opaque > 0 {
+            (Severity::High, format!("{opaque} could not be read as bytecode"))
+        } else if !noisy.is_empty() {
+            (
+                Severity::High,
+                format!(
+                    "the bytecode calls {}, which a tensor transformation does not need",
+                    noisy.join(", ")
+                ),
+            )
+        } else {
+            let used: Vec<String> = dedup(
+                lambdas
+                    .iter()
+                    .filter_map(|(_, g)| match g {
+                        Lambda::Plain(n) => Some(n.clone()),
+                        _ => None,
+                    })
+                    .flatten()
+                    .collect(),
+            );
+            (
+                Severity::Medium,
+                if used.is_empty() {
+                    "the bytecode names nothing outside its arguments".to_string()
+                } else {
+                    format!(
+                        "the bytecode names only {} (no import, file, process or reflection names)",
+                        used.join(", ")
+                    )
+                },
+            )
+        };
+        out.push(
+            Finding::new(
+                ids::KERAS_LAMBDA,
+                format!(
+                    "{} Lambda layer(s) with serialized code: {}; {detail}",
+                    lambdas.len(),
+                    short_list(&names)
+                ),
+                loc,
+            )
+            .with_severity(severity),
+        );
     }
     let modules = dedup(
         w.modules
@@ -284,6 +439,64 @@ pub(crate) mod tests {
         assert!(check_config_json(CLEAN_K3.as_bytes(), "x").is_empty());
     }
 
+    fn sample(version: &str, kind: &str) -> &'static str {
+        crate::pycode::tests::SAMPLES
+            .iter()
+            .find(|(v, k, _)| *v == version && *k == kind)
+            .map(|(_, _, s)| *s)
+            .expect("sample")
+    }
+
+    #[test]
+    fn lambda_severity_follows_the_names_in_the_bytecode() {
+        for version in ["3.9", "3.12", "3.16"] {
+            // Keras 2 shape, with the line breaks codecs.encode(..., "base64") inserts.
+            let wrapped: String = sample(version, "system")
+                .as_bytes()
+                .chunks(76)
+                .map(|c| format!("{}\\n", std::str::from_utf8(c).unwrap()))
+                .collect();
+            let k2 = format!(
+                r#"{{"class_name": "Lambda", "config": {{"name": "l", "function": ["{wrapped}", null, null], "function_type": "lambda"}}}}"#
+            );
+            let f = check_config_json(k2.as_bytes(), "x");
+            assert_eq!(f[0].severity, Severity::Critical, "{version}: {f:?}");
+            assert!(
+                f[0].message.contains("__import__") && f[0].message.contains("system"),
+                "{}",
+                f[0].message
+            );
+            // Keras 3 shape with a function that only does arithmetic on tensors.
+            for (kind, needle) in [
+                ("math", "names nothing outside its arguments"),
+                ("tensor", "reduce_mean"),
+            ] {
+                let k3 = format!(
+                    r#"{{"module": "keras.layers", "class_name": "Lambda", "config": {{"name": "l", "function": {{"class_name": "__lambda__", "config": {{"code": "{}", "defaults": null, "closure": null}}}}}}}}"#,
+                    sample(version, kind)
+                );
+                let f = check_config_json(k3.as_bytes(), "x");
+                assert_eq!(f.len(), 1, "{f:?}");
+                assert_eq!(f[0].severity, Severity::Medium, "{version} {kind}: {f:?}");
+                assert!(f[0].message.contains(needle), "{}", f[0].message);
+            }
+        }
+        // Source text in place of bytecode, and a mix of readable and unreadable layers.
+        let src = r#"{"class_name": "Lambda", "config": {"name": "s", "function": "lambda x: eval('1')"}}"#;
+        let f = check_config_json(src.as_bytes(), "x");
+        assert!(f[0].severity == Severity::Critical && f[0].message.contains("eval"));
+        let mixed = format!(
+            r#"{{"layers": [{{"class_name": "Lambda", "config": {{"name": "a", "function": ["{}", null, null]}}}}, {{"class_name": "Lambda", "config": {{"name": "b", "function": ["4wEAAAAA", null, null]}}}}]}}"#,
+            sample("3.12", "math")
+        );
+        let f = check_config_json(mixed.as_bytes(), "x");
+        assert!(
+            f[0].severity == Severity::High && f[0].message.starts_with("2 Lambda"),
+            "{f:?}"
+        );
+        assert!(f[0].message.contains("1 could not be read"));
+    }
+
     #[test]
     fn foreign_modules_and_custom_objects() {
         let c = r#"{"module": "keras", "class_name": "Model", "config": {"layers": [{"module": "os", "class_name": "getcwd", "config": {}}, {"module": "keras.utils", "class_name": "get_file", "config": {}}, {"module": null, "class_name": "MyLayer", "registered_name": "Custom>MyLayer", "config": {}}, {"class_name": "TFOpLambda", "config": {"function": "io.write_file"}}, {"module": "builtins", "class_name": "tuple"}]}}"#;
@@ -314,6 +527,22 @@ pub(crate) mod tests {
             let f = check_config_json(bad.as_bytes(), "x");
             assert_eq!(f[0].rule, ids::KERAS_UNSAFE_MODULE, "{bad}");
         }
+    }
+
+    #[test]
+    fn unknown_names_in_legacy_configs_are_custom_objects() {
+        let c = r#"{"class_name": "Sequential", "config": {"layers": [{"class_name": "Dense", "config": {"units": 2}}, {"class_name": "MyAttention", "config": {"name": "m"}}]}}"#;
+        let f = check_config_json(c.as_bytes(), "x");
+        assert_eq!(f.len(), 1);
+        assert!(
+            f[0].rule == ids::KERAS_CUSTOM_OBJECT && f[0].message.contains("MyAttention"),
+            "{f:?}"
+        );
+        let t = r#"{"loss": {"out_a": "mse", "out_b": "dice_loss"}, "metrics": [["accuracy", "AUC"], {"class_name": "F1Mine", "config": {"name": "f"}}], "optimizer_config": {"class_name": "Adam", "config": {"lr": 0.1}}}"#;
+        let f = check_config_json(t.as_bytes(), "x");
+        assert_eq!(f.len(), 1, "{f:?}");
+        assert!(f[0].message.contains("dice_loss") && f[0].message.contains("F1Mine"));
+        assert!(!f[0].message.contains("mse") && !f[0].message.contains("Adam") && !f[0].message.contains("AUC"));
     }
 
     #[test]

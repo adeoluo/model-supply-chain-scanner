@@ -316,3 +316,118 @@ mod fuzz {
         }
     }
 }
+
+#[test]
+fn tar_and_7z_members_are_scanned() {
+    use crate::archive::tests::tar;
+    let t = tar(&[
+        ("model/weights.pkl", b'0', "", GETCWD),
+        ("model/notes.txt", b'0', "", b"just text"),
+        ("../escape.bin", b'0', "", b"x"),
+    ]);
+    let r = scan(&t, "model.tar");
+    assert_eq!(r.format, "tar");
+    assert_eq!(r.verdict, Verdict::Malicious);
+    assert!(rules(&r).contains(&ids::ARCHIVE_TRAVERSAL));
+    assert_eq!(r.imports[0].member, "model.tar/model/weights.pkl");
+    assert_eq!(r.stats.archive_entries, 3);
+    // The same archive under a name that promises something else is still read as tar.
+    let r = scan(&t, "model.nemo");
+    assert!(
+        r.format == "tar" && !rules(&r).contains(&ids::FORMAT_MISMATCH),
+        "{:?}",
+        r.findings
+    );
+    let clean = tar(&[("a.pkl", b'0', "", BENIGN)]);
+    assert_eq!(scan(&clean, "a.tar").verdict, Verdict::Clean);
+    // A real 7z archive (LZMA2) holding a pickle and a traversal name.
+    let seven = {
+        use sevenz_rust2::{ArchiveEntry, ArchiveWriter};
+        let mut w = ArchiveWriter::new(std::io::Cursor::new(Vec::new())).expect("writer");
+        w.push_archive_entry(ArchiveEntry::new_file("model/data.pkl"), Some(GETCWD))
+            .expect("entry");
+        w.push_archive_entry(ArchiveEntry::new_file("../../up.bin"), Some(&b"x"[..]))
+            .expect("entry");
+        w.finish().expect("finish").into_inner()
+    };
+    let r = scan(&seven, "weights.7z");
+    assert_eq!(r.format, "7z");
+    assert_eq!(r.verdict, Verdict::Malicious, "{:?}", r.findings);
+    assert!(rules(&r).contains(&ids::ARCHIVE_TRAVERSAL));
+    assert_eq!(r.imports[0].member, "weights.7z/model/data.pkl");
+    // A member larger than the limit is reported, not read.
+    let small = Options {
+        max_decompressed: 8,
+        ..Options::default()
+    };
+    let r = scan_bytes(&seven, "weights.7z", &small);
+    assert!(rules(&r).contains(&ids::ARCHIVE_BOMB), "{:?}", r.findings);
+    // A damaged 7z and a RAR are reported as not scanned, never as clean.
+    let mut seven = crate::archive::SEVENZ_MAGIC.to_vec();
+    seven.extend_from_slice(&[0u8; 64]);
+    let r = scan(&seven, "m.7z");
+    assert!(
+        r.format == "7z" && rules(&r) == vec![ids::ARCHIVE_MALFORMED],
+        "{:?}",
+        r.findings
+    );
+    let r = scan(b"Rar!\x1a\x07\x01\x00rest", "m.rar");
+    assert!(r.format == "rar" && r.verdict == Verdict::Suspicious);
+}
+
+#[test]
+fn text_configs_and_templates() {
+    let r = scan(
+        b"hook:\n  _target_: os.system\n  _args_: ['id']\n",
+        "conf/model_config.yaml",
+    );
+    assert_eq!(r.format, "yaml");
+    assert_eq!(r.verdict, Verdict::Malicious);
+    assert_eq!(rules(&r), vec![ids::CONFIG_TARGET]);
+    let r = scan(b"a: !!python/object/apply:os.system ['id']\n", "c.yml");
+    assert_eq!(rules(&r), vec![ids::CONFIG_YAML_TAG]);
+    assert_eq!(
+        scan(b"model:\n  _target_: torch.nn.Linear\n", "c.yaml").verdict,
+        Verdict::Clean
+    );
+    let r = scan(
+        b"{{ cycler.__init__.__globals__.os.system('id') }}",
+        "chat_template.jinja",
+    );
+    assert_eq!(r.format, "jinja-template");
+    assert_eq!(r.verdict, Verdict::Malicious);
+    assert_eq!(
+        scan(b"{% for m in messages %}{{ m.content }}{% endfor %}", "t.j2").verdict,
+        Verdict::Clean
+    );
+    // A pickle named like a config is still a pickle.
+    let r = scan(GETCWD, "config.yaml");
+    assert!(r.format == "pickle" && r.verdict == Verdict::Malicious);
+    // Text without a config extension is not guessed at.
+    assert_eq!(scan(b"_target_: os.system\n", "notes.txt").format, "unknown");
+}
+
+#[test]
+fn macos_metadata_is_not_a_broken_model() {
+    let mut d = vec![0x00, 0x05, 0x16, 0x07, 0x00, 0x02, 0x00, 0x00];
+    d.extend_from_slice(b"Mac OS X        ");
+    d.extend_from_slice(&[0u8; 64]);
+    let r = scan(&d, "._model.safetensors");
+    assert_eq!(r.format, "appledouble");
+    assert_eq!(r.verdict, Verdict::Clean);
+    assert_eq!(rules(&r), vec![ids::FORMAT_UNKNOWN]);
+}
+
+#[test]
+fn safetensors_metadata_is_checked_for_staged_payloads() {
+    let h = r#"{"__metadata__":{"format":"pt","note":"import os; os.system('echo inert')"},"a":{"dtype":"U8","shape":[4],"data_offsets":[0,4]}}"#;
+    let d = crate::safetensors::tests::st(h, 4);
+    let r = scan(&d, "m.safetensors");
+    assert_eq!(rules(&r), vec![ids::EMBEDDED_CODE]);
+    assert_eq!(r.verdict, Verdict::Unsafe);
+    let ok = r#"{"__metadata__":{"format":"pt","ss_tag_frequency":"{\"img\": {\"1girl\": 3}}"},"a":{"dtype":"U8","shape":[4],"data_offsets":[0,4]}}"#;
+    assert_eq!(
+        scan(&crate::safetensors::tests::st(ok, 4), "m.safetensors").verdict,
+        Verdict::Clean
+    );
+}

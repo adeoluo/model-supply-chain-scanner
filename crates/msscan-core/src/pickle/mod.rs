@@ -7,6 +7,7 @@
 //! STACK_GLOBAL operands and joblib array headers can be inspected.
 
 pub mod policy;
+pub mod stdlib;
 
 use crate::finding::{Finding, Severity, ids};
 pub use policy::Tier;
@@ -154,9 +155,102 @@ struct Shared<'a> {
     persistent_ids: u64,
     joblib_arrays: u64,
     max_protocol: u8,
+    /// Bytes of string constants still inspected for hidden payloads in this stream.
+    const_budget: usize,
+    /// Constants found to be pickles: start offset and the worst severity inside.
+    embedded: HashMap<usize, Severity>,
 }
 
+/// String constants inspected for hidden payloads per stream; the rest is reported unscanned.
+const CONSTANT_BUDGET: usize = 256 << 20;
+/// Code is short; longer constants are checked for an embedded pickle only.
+const MAX_CODE_CONSTANT: usize = 1 << 16;
+
 impl<'a> Shared<'a> {
+    /// Check one string or bytes constant for a second-stage payload: a pickle (raw, base64 or
+    /// hex) or a call that runs code. Nothing is executed; candidates are decoded and parsed.
+    fn inspect_constant(&mut self, start: usize, end: usize) {
+        let raw = &self.data[start..end];
+        if raw.len() < crate::payload::MIN_CONSTANT {
+            return;
+        }
+        if raw.len() > self.const_budget {
+            if self.const_budget != usize::MAX {
+                self.const_budget = usize::MAX;
+                self.findings.push(Finding::new(
+                    ids::PICKLE_UNSCANNED_REGION,
+                    "string constants past the inspection budget were not checked for hidden payloads",
+                    self.at(start),
+                ));
+            }
+            return;
+        }
+        if self.const_budget != usize::MAX {
+            self.const_budget -= raw.len();
+        } else {
+            return;
+        }
+        let at = self.at(start);
+        if self.depth < self.limits.max_nested_depth {
+            let mut candidates: Vec<(&'static str, std::borrow::Cow<'_, [u8]>)> = Vec::new();
+            if crate::payload::pickle_shaped(raw) {
+                candidates.push(("raw", std::borrow::Cow::Borrowed(raw)));
+            }
+            for (encoding, bytes) in crate::payload::decodings(raw) {
+                if crate::payload::pickle_shaped(&bytes) {
+                    candidates.push((encoding, std::borrow::Cow::Owned(bytes)));
+                }
+            }
+            for (encoding, bytes) in candidates {
+                let sub_loc = format!("{at}>{encoding}-pickle");
+                let mut sub = analyze_with(&bytes, &sub_loc, self.limits, self.depth + 1);
+                if sub.pickles == 0 || sub.findings.iter().any(|f| f.rule == ids::PICKLE_MALFORMED) {
+                    continue;
+                }
+                let worst = sub.max_severity();
+                let odd_call = sub.imports.iter().any(|i| i.called && i.tier != Tier::Safe);
+                if worst >= Some(Severity::High) || (encoding != "raw" && odd_call) {
+                    let sev = worst.unwrap_or(Severity::High).max(Severity::High);
+                    let calls: Vec<String> = sub
+                        .imports
+                        .iter()
+                        .filter(|i| i.called && i.tier != Tier::Safe)
+                        .take(3)
+                        .map(|i| format!("{}.{}", i.module, i.name))
+                        .collect();
+                    self.findings.push(
+                        Finding::new(
+                            ids::PICKLE_EMBEDDED_PAYLOAD,
+                            format!(
+                                "a {}-byte constant is a pickle ({encoding}) that calls {}",
+                                end - start,
+                                if calls.is_empty() {
+                                    "nothing by name".to_string()
+                                } else {
+                                    calls.join(", ")
+                                }
+                            ),
+                            at.clone(),
+                        )
+                        .with_severity(sev),
+                    );
+                    self.findings.append(&mut sub.findings);
+                    self.embedded.insert(start, sev);
+                }
+                return;
+            }
+        }
+        if raw.len() <= MAX_CODE_CONSTANT
+            && let Some((sink, encoding)) = crate::payload::hidden_code(raw)
+        {
+            self.findings.push(Finding::new(
+                ids::EMBEDDED_CODE,
+                format!("a string constant ({encoding}) contains {sink}...)"),
+                at,
+            ));
+        }
+    }
+
     fn at(&self, off: usize) -> String {
         format!("{}@{}", self.loc, off)
     }
@@ -465,6 +559,17 @@ impl<'s, 'a> Vm<'s, 'a> {
         });
         let at = self.sh.at(off);
         match payload {
+            Some((s, _)) if self.sh.embedded.contains_key(&s) => {
+                let sev = self.sh.embedded[&s];
+                self.sh.findings.push(
+                    Finding::new(
+                        ids::PICKLE_NESTED_LOADER,
+                        format!("calls {module}.{name} on the embedded pickle reported above"),
+                        at,
+                    )
+                    .with_severity(sev),
+                );
+            }
             Some((s, e)) if self.sh.depth < self.sh.limits.max_nested_depth => {
                 let sub_loc = format!("{at}>{module}.{name}");
                 let mut sub = analyze_with(&self.sh.data[s..e], &sub_loc, self.sh.limits, self.sh.depth + 1);
@@ -521,11 +626,25 @@ impl<'s, 'a> Vm<'s, 'a> {
         }
         if !keys.is_empty() {
             self.mark_called(state);
-            self.sh.findings.push(Finding::new(
+            // Only names that Python itself looks up can redirect a later call. A project's own
+            // double-underscore attribute (a cache, a resource table) is data.
+            let special = keys.iter().any(|k| stdlib::is_special_name(k));
+            let f = Finding::new(
                 ids::PICKLE_ATTRIBUTE_INJECTION,
-                format!("BUILD assigns {}", keys.join(", ")),
+                format!(
+                    "BUILD assigns {}{}",
+                    keys.join(", "),
+                    if special {
+                        ""
+                    } else {
+                        " (not a name Python looks up itself)"
+                    }
+                ),
                 self.sh.at(off),
-            ));
+            );
+            self.sh
+                .findings
+                .push(if special { f } else { f.with_severity(Severity::Low) });
         }
         if let Node::Global(g) = self.nodes[target as usize] {
             let writes_attrs = match slot_state {
@@ -602,6 +721,8 @@ impl<'s, 'a> Vm<'s, 'a> {
                     persistent_ids: 0,
                     joblib_arrays: 0,
                     max_protocol: 0,
+                    const_budget: self.sh.const_budget,
+                    embedded: HashMap::new(),
                 };
                 let res = {
                     let mut vm = Vm::new(&mut sub, start);
@@ -779,11 +900,13 @@ impl<'s, 'a> Vm<'s, 'a> {
                 b'S' => {
                     let l = self.line()?;
                     let s = decode_string_literal(l).ok_or(Stop::BadValue("invalid STRING literal"))?;
+                    self.sh.inspect_constant(self.pos - 1 - l.len(), self.pos - 1);
                     self.push(Self::str_node(&s));
                 }
                 b'V' => {
                     let l = self.line()?;
                     let s = decode_raw_unicode_escape(l);
+                    self.sh.inspect_constant(self.pos - 1 - l.len(), self.pos - 1);
                     self.push(Self::str_node(s.as_bytes()));
                 }
                 b'T' => {
@@ -793,29 +916,39 @@ impl<'s, 'a> Vm<'s, 'a> {
                     }
                     let n = self.len_checked(n as u64)?;
                     let b = self.take(n)?;
-                    self.push(Self::str_node(b));
+                    let node = Self::str_node(b);
+                    self.sh.inspect_constant(self.pos - n, self.pos);
+                    self.push(node);
                 }
                 b'U' => {
                     let n = self.u8()? as usize;
                     let b = self.take(n)?;
-                    self.push(Self::str_node(b));
+                    let node = Self::str_node(b);
+                    self.sh.inspect_constant(self.pos - n, self.pos);
+                    self.push(node);
                 }
                 b'X' => {
                     let n = self.u32()? as u64;
                     let n = self.len_checked(n)?;
                     let b = self.take(n)?;
-                    self.push(Self::str_node(b));
+                    let node = Self::str_node(b);
+                    self.sh.inspect_constant(self.pos - n, self.pos);
+                    self.push(node);
                 }
                 0x8c => {
                     let n = self.u8()? as usize;
                     let b = self.take(n)?;
-                    self.push(Self::str_node(b));
+                    let node = Self::str_node(b);
+                    self.sh.inspect_constant(self.pos - n, self.pos);
+                    self.push(node);
                 }
                 0x8d => {
                     let n = self.u64()?;
                     let n = self.len_checked(n)?;
                     let b = self.take(n)?;
-                    self.push(Self::str_node(b));
+                    let node = Self::str_node(b);
+                    self.sh.inspect_constant(self.pos - n, self.pos);
+                    self.push(node);
                 }
                 b'B' | b'C' | 0x8e | 0x96 => {
                     let n = match op {
@@ -826,6 +959,7 @@ impl<'s, 'a> Vm<'s, 'a> {
                     let n = self.len_checked(n)?;
                     let start = self.pos;
                     self.take(n)?;
+                    self.sh.inspect_constant(start, start + n);
                     self.push(Node::Bytes(start, start + n));
                 }
                 0x97 => self.push(Node::Unknown),
@@ -1177,6 +1311,8 @@ fn analyze_with(data: &[u8], loc: &str, limits: Limits, depth: u8) -> PickleRepo
         persistent_ids: 0,
         joblib_arrays: 0,
         max_protocol: 0,
+        const_budget: CONSTANT_BUDGET,
+        embedded: HashMap::new(),
     };
     let mut pos = 0usize;
     let mut pickles = 0usize;
@@ -1271,6 +1407,14 @@ fn analyze_with(data: &[u8], loc: &str, limits: Limits, depth: u8) -> PickleRepo
                 format!("imports {what}"),
                 at,
             )),
+            (Tier::Unknown | Tier::Library, true) if policy::call_risk(&imp.module, &imp.name).is_some() => {
+                let why = policy::call_risk(&imp.module, &imp.name).unwrap_or_default();
+                Some(Finding::new(
+                    ids::PICKLE_NON_CONSTRUCTOR_CALL,
+                    format!("calls {what}: {why}"),
+                    at,
+                ))
+            }
             (Tier::Unknown, true) => Some(Finding::new(ids::PICKLE_UNKNOWN_CALL, format!("calls {what}"), at)),
             (Tier::Unknown, false) => Some(Finding::new(ids::PICKLE_UNKNOWN_IMPORT, format!("imports {what}"), at)),
             (Tier::Library, true) => Some(Finding::new(ids::PICKLE_LIBRARY_CALL, format!("calls {what}"), at)),

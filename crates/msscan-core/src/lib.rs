@@ -4,6 +4,7 @@
 //! run the matching analyzer and return a [`Report`] with findings, a verdict and a risk score.
 //! Nothing in a scanned file is ever imported, deserialized into live objects or executed.
 
+pub mod archive;
 pub mod compress;
 pub mod finding;
 pub mod formats;
@@ -11,15 +12,19 @@ pub mod gguf;
 pub mod hfjson;
 pub mod jinja;
 pub mod keras;
+pub mod keras_names;
 pub mod numpy;
 pub mod onnx;
+pub mod payload;
 pub mod pickle;
 pub mod protobuf;
+pub mod pycode;
 pub mod report;
 pub mod safetensors;
 pub mod savedmodel;
 pub mod scan;
 pub mod service;
+pub mod textcfg;
 pub mod zip;
 
 pub use finding::{Finding, RULES, Rule, Severity};

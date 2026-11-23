@@ -132,3 +132,13 @@ def render(reports: list[Report], output: str = "text", *, min_severity: str = "
 def rules() -> list[Rule]:
     """The rule catalog."""
     return [Rule(**r) for r in json.loads(msscan_rs.rules())]
+
+
+def explain_global(module: str, name: str) -> tuple[str, str | None]:
+    """How the pickle policy treats ``module.name``.
+
+    Returns the tier (``safe``, ``library``, ``unknown`` or ``dangerous``) and, when a pickle
+    that calls the global would be refused for the shape of the call, the reason.
+    """
+    tier, reason = msscan_rs.explain_global(module, name)
+    return tier, reason

@@ -237,11 +237,17 @@ fn parse(d: &[u8], total: u64, loc: &str, info: &mut GgufInfo, out: &mut Vec<Fin
         }
     }
     let mut tensors = Vec::with_capacity(info.tensor_count.min(1 << 16) as usize);
+    let mut nonstandard: Vec<String> = Vec::new();
     for _ in 0..info.tensor_count {
         let name = String::from_utf8_lossy(r.string()?).into_owned();
         let nd = r.u32()?;
-        if nd > 4 {
-            return Err(Halt::Bad(format!("tensor {name:?} has {nd} dimensions (at most 4)")));
+        // llama.cpp stops at four dimensions, and older versions overflowed on more. Writers for
+        // video models store five (3-D convolution weights), so five is accepted with a note.
+        if nd > 5 {
+            return Err(Halt::Bad(format!("tensor {name:?} has {nd} dimensions (at most 5)")));
+        }
+        if nd > 4 && !nonstandard.iter().any(|n: &String| n.contains("dimensions")) {
+            nonstandard.push(format!("tensor {name:?} has {nd} dimensions (llama.cpp accepts 4)"));
         }
         let mut elems = 1u64;
         for _ in 0..nd {
@@ -253,8 +259,15 @@ fn parse(d: &[u8], total: u64, loc: &str, info: &mut GgufInfo, out: &mut Vec<Fin
         }
         let ty = r.u32()?;
         let off = r.u64()?;
-        if ty >= 64 {
+        // Type ids grow as quantizations are added and forks define their own, so an id this
+        // reader does not know is reported without failing the file; its size cannot be checked.
+        if ty >= 4096 {
             return Err(Halt::Bad(format!("tensor {name:?} has invalid type {ty}")));
+        }
+        if type_size(ty).is_none() && !nonstandard.iter().any(|n: &String| n.contains("type id")) {
+            nonstandard.push(format!(
+                "tensor {name:?} has type id {ty}, which this reader does not know"
+            ));
         }
         if !off.is_multiple_of(alignment) {
             return Err(Halt::Bad(format!(
@@ -263,6 +276,9 @@ fn parse(d: &[u8], total: u64, loc: &str, info: &mut GgufInfo, out: &mut Vec<Fin
         }
         let size = type_size(ty).map(|(bs, ts)| elems.div_ceil(bs).saturating_mul(ts));
         tensors.push((name, off, size));
+    }
+    for note in nonstandard {
+        out.push(Finding::new(ids::GGUF_NONSTANDARD, note, loc));
     }
     let data_start = (r.pos as u64).div_ceil(alignment) * alignment;
     let data_len = total.saturating_sub(data_start);
@@ -405,15 +421,30 @@ pub(crate) mod tests {
     fn structural_problems() {
         let cases = [
             G::new().tensor("w", &[4], 0, 0).build(4),
-            G::new().tensor("w", &[1, 1, 1, 1, 1], 0, 0).build(64),
+            G::new().tensor("w", &[1; 6], 0, 0).build(64),
             G::new().tensor("w", &[u64::MAX, 4], 0, 0).build(64),
-            G::new().tensor("w", &[4], 99, 0).build(64),
+            G::new().tensor("w", &[4], 5000, 0).build(64),
             G::new().tensor("w", &[4], 0, 3).build(64),
             G::new().kv_u32("general.alignment", 3).build(0),
         ];
         for d in cases {
             assert_eq!(run(&d)[0].rule, ids::GGUF_MALFORMED);
         }
+        // Five dimensions (video models) and type ids from quantization forks are reported at
+        // low severity, once each, and the rest of the file is still checked.
+        let odd = G::new()
+            .tensor("patch", &[1, 1, 1, 1, 1], 0, 0)
+            .tensor("patch2", &[1, 1, 1, 1, 1], 0, 32)
+            .tensor("tern", &[4], 144, 64)
+            .tensor("tern2", &[4], 142, 96)
+            .build(128);
+        let f = run(&odd);
+        assert_eq!(f.len(), 2, "{f:?}");
+        assert!(
+            f.iter()
+                .all(|x| x.rule == ids::GGUF_NONSTANDARD && x.severity == crate::Severity::Low)
+        );
+        assert!(f[0].message.contains("5 dimensions") && f[1].message.contains("type id 144"));
         let dup = G::new().kv_u32("a", 1).kv_u32("a", 2).build(0);
         assert!(run(&dup)[0].message.contains("duplicate"));
         let overlap = G::new().tensor("a", &[16], 0, 0).tensor("b", &[16], 0, 32).build(128);

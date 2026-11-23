@@ -34,6 +34,13 @@ pub fn check(d: &[u8], loc: &str) -> Vec<Finding> {
             loc,
         ));
     }
+    let mut targets = Vec::new();
+    collect_targets(&v, &mut targets, 0);
+    targets.sort();
+    targets.dedup();
+    for t in &targets {
+        out.extend(crate::textcfg::target_finding(t, loc));
+    }
     match v.get("chat_template") {
         Some(Value::String(t)) => out.extend(jinja::check(t, "chat_template", loc)),
         Some(Value::Array(a)) => {
@@ -49,6 +56,23 @@ pub fn check(d: &[u8], loc: &str) -> Vec<Finding> {
         _ => {}
     }
     out
+}
+
+/// Every string value of a `_target_` key, at any depth (Hydra-style configs saved as JSON).
+fn collect_targets(v: &Value, out: &mut Vec<String>, depth: u32) {
+    if depth > 64 {
+        return;
+    }
+    match v {
+        Value::Object(m) => {
+            if let Some(t) = m.get("_target_").and_then(Value::as_str) {
+                out.push(t.to_string());
+            }
+            m.values().for_each(|x| collect_targets(x, out, depth + 1));
+        }
+        Value::Array(a) => a.iter().for_each(|x| collect_targets(x, out, depth + 1)),
+        _ => {}
+    }
 }
 
 #[cfg(test)]
@@ -69,5 +93,10 @@ mod tests {
         assert!(check(br#"{"chat_template": "{{ messages }}"}"#, "t").is_empty());
         assert!(check(b"not json", "t").is_empty());
         assert!(!looks_like_json(b"[1]"));
+        let t =
+            br#"{"model": {"_target_": "torch.nn.Linear"}, "hooks": [{"_target_": "os.system", "_args_": ["id"]}]}"#;
+        let f = check(t, "config.json");
+        assert_eq!(f.len(), 1);
+        assert!(f[0].rule == ids::CONFIG_TARGET && f[0].message.contains("os.system"));
     }
 }

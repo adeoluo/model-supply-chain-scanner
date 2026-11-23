@@ -63,3 +63,13 @@ def test_rules_catalog() -> None:
     assert len(ids) == len(set(ids)) > 30
     assert {r.severity for r in rules} <= set(msscan.SEVERITIES)
     assert severity_rank(None) == -1 and severity_rank("critical") == 4
+
+
+def test_explain_global_reports_tier_and_call_shape() -> None:
+    assert msscan.explain_global("collections", "OrderedDict") == ("safe", None)
+    assert msscan.explain_global("os", "system") == ("dangerous", None)
+    tier, reason = msscan.explain_global("uuid", "_get_command_stdout")
+    assert tier == "unknown" and reason is not None and "standard-library" in reason
+    tier, reason = msscan.explain_global("torch.utils._config_module", "ConfigModule.load_config")
+    assert tier == "library" and reason is not None and "attribute path" in reason
+    assert msscan.explain_global("torch.nn.modules.linear", "Linear") == ("library", None)

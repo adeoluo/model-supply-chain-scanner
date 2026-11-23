@@ -1,6 +1,6 @@
 //! safetensors headers: the same checks the reference loader makes, reported instead of raised.
 
-use crate::finding::{Finding, ids};
+use crate::finding::{Finding, Severity, ids};
 use serde::de::{Deserializer, MapAccess, Visitor};
 use serde_json::Value;
 use std::fmt;
@@ -51,7 +51,7 @@ pub fn header_len(d: &[u8]) -> Option<u64> {
 }
 
 pub fn is_safetensors(d: &[u8]) -> bool {
-    header_len(d).is_some_and(|n| n >= 2)
+    header_len(d).is_some_and(|n| (2..=MAX_HEADER).contains(&n))
 }
 
 #[derive(Debug, Default)]
@@ -112,6 +112,16 @@ pub fn check(d: &[u8], total: u64, loc: &str) -> (Vec<Finding>, Info) {
             match v.as_object() {
                 Some(m) => {
                     info.metadata_keys = m.len() as u64;
+                    for (key, value) in m {
+                        if let Some(text) = value.as_str() {
+                            let scanned = &text.as_bytes()[..text.len().min(1 << 20)];
+                            out.extend(crate::payload::inspect_text(
+                                scanned,
+                                &format!("__metadata__[{key:?}]"),
+                                loc,
+                            ));
+                        }
+                    }
                     if m.values().any(|x| !x.is_string()) {
                         out.push(Finding::new(
                             ids::SAFETENSORS_METADATA,
@@ -195,12 +205,40 @@ pub fn check(d: &[u8], total: u64, loc: &str) -> (Vec<Finding>, Info) {
         }
         end = end.max(*e);
     }
-    if end != data_len {
+    if end > data_len {
         out.push(Finding::new(
             ids::SAFETENSORS_OFFSETS,
             format!("tensors cover {end} bytes but the file holds {data_len} bytes of data"),
             loc,
         ));
+    } else if end < data_len {
+        // Bytes after the last tensor are read by no loader, which is where a second file can
+        // hide. With the whole file in hand they are inspected; with only the header they are
+        // reported as not inspected.
+        let extra = data_len - end;
+        let tail = usize::try_from(8 + n + end)
+            .ok()
+            .filter(|_| d.len() as u64 == total)
+            .and_then(|start| d.get(start..));
+        let (severity, what) = match tail {
+            Some(t) if t.iter().all(|b| *b == 0 || b.is_ascii_whitespace()) => (Severity::Low, "padding".to_string()),
+            Some(t) => match crate::formats::sniff(t, "").or_else(|| crate::pickle::is_pickle(t).then_some("pickle")) {
+                Some(format) => (Severity::High, format!("a {format} file appended to the tensors")),
+                None => (Severity::Medium, "data in no format this scanner reads".to_string()),
+            },
+            None => (
+                Severity::Medium,
+                "not inspected, only the header was scanned".to_string(),
+            ),
+        };
+        out.push(
+            Finding::new(
+                ids::SAFETENSORS_OFFSETS,
+                format!("{extra} byte(s) follow the last tensor: {what}"),
+                loc,
+            )
+            .with_severity(severity),
+        );
     }
     (out, info)
 }
@@ -235,6 +273,36 @@ pub(crate) mod tests {
         let (f, info) = check(&d[..20], d.len() as u64, "x");
         assert!(f.is_empty() && info.partial);
         assert!(run(&st("{}", 0)).is_empty());
+    }
+
+    #[test]
+    fn bytes_after_the_last_tensor_are_inspected() {
+        let h = r#"{"a":{"dtype":"U8","shape":[4],"data_offsets":[0,4]}}"#;
+        let grade = |tail: &[u8]| {
+            let mut d = st(h, 4);
+            d.extend_from_slice(tail);
+            let total = d.len() as u64;
+            let f = check(&d, total, "x").0;
+            assert_eq!(f.len(), 1, "{f:?}");
+            (f[0].severity, f[0].message.clone())
+        };
+        assert_eq!(grade(&[0, 0, 0]).0, Severity::Low);
+        let (sev, msg) = grade(b"\x80\x04\x95\x00\x00\x00\x00\x00\x00\x00\x00cos\nsystem\n.");
+        assert!(sev == Severity::High && msg.contains("pickle"), "{msg}");
+        let (sev, msg) = grade(b"PK\x03\x04 and the rest of an archive");
+        assert!(sev == Severity::High && msg.contains("zip"), "{msg}");
+        assert_eq!(grade(b"sixty-one bytes of something unknown").0, Severity::Medium);
+        // Header only: the tail exists (declared size) but was not downloaded.
+        let d = st(h, 4);
+        let f = check(&d[..8 + h.len()], d.len() as u64 + 85, "x").0;
+        assert!(
+            f[0].severity == Severity::Medium && f[0].message.contains("not inspected"),
+            "{f:?}"
+        );
+        // A random binary file is not taken for safetensors because byte 8 happens to be '{'.
+        let mut shard = u64::MAX.to_le_bytes().to_vec();
+        shard.push(b'{');
+        assert!(!is_safetensors(&shard));
     }
 
     #[test]

@@ -139,6 +139,15 @@ rules! {
     PICKLE_RESOURCE = "MS114", "pickle-resource-limit", Medium, "CWE-400",
         "The pickle exceeds an analysis limit (opcodes, nesting, memo size), which also bounds memory use when it is loaded.",
         "Inspect the file; raise the limit only for trusted producers.";
+    PICKLE_NON_CONSTRUCTOR_CALL = "MS115", "pickle-non-constructor-call", High, "CWE-502",
+        "A pickle calls something that object reconstruction does not need: a standard-library function outside a short allowlist, a method reached through an attribute path, or a library function that is neither a class nor a rebuild helper. Published scanner bypasses have this shape.",
+        "Treat as unsafe unless you know why the producer needs the call; convert the file to safetensors.";
+    PICKLE_EMBEDDED_PAYLOAD = "MS116", "pickle-embedded-payload", High, "CWE-506",
+        "A string or bytes constant is itself a pickle, stored raw or base64 or hex encoded, that makes calls object reconstruction does not need. Loading the outer file does not run it; a second stage that decodes and unpickles the constant would.",
+        "Do not pass any value from this file to pickle.loads; find out why it carries a second pickle.";
+    EMBEDDED_CODE = "MS117", "embedded-code-string", High, "CWE-506",
+        "A string constant or metadata value contains a call that runs commands or code (os.system, subprocess, exec of decoded data), in plain text or base64 or hex encoded. Loading the file does not run it; code that evaluates the value would.",
+        "Do not evaluate values from this file; find out why it carries code.";
     ARCHIVE_TRAVERSAL = "MS201", "archive-path-traversal", High, "CWE-22",
         "An archive entry name is absolute or climbs out of the extraction directory.",
         "Do not extract the archive with tools that trust entry names.";
@@ -167,7 +176,7 @@ rules! {
         "A TorchScript archive contains serialized code that torch.jit.load compiles and runs.",
         "Load TorchScript only from trusted producers.";
     KERAS_LAMBDA = "MS501", "keras-lambda-layer", High, "CWE-94",
-        "A Keras model contains a Lambda layer with serialized Python bytecode, which runs when the model is loaded or called (Keras 3 blocks it unless safe_mode=False; Keras 2 HDF5 loading does not).",
+        "A Keras model contains a Lambda layer with serialized Python bytecode, which runs when the model is loaded or called (Keras 3 blocks it unless safe_mode=False; Keras 2 HDF5 loading does not). The bytecode is read without running it and the severity follows the names it carries: critical when it imports, reflects or reaches files or processes, high when it cannot be read or does something visible such as printing, medium when it names none of those.",
         "Rebuild the layer in code and load weights only.";
     KERAS_UNSAFE_MODULE = "MS502", "keras-unsafe-module", High, "CWE-470",
         "A Keras config deserializes a class or function from a module that runs code or reaches the system (os, subprocess, builtins and the pickle denylist) or a Keras file utility.",
@@ -211,6 +220,9 @@ rules! {
     GGUF_MALFORMED = "MS803", "gguf-malformed", High, "CWE-20",
         "The GGUF header is invalid: bad counts, lengths, types or tensor offsets outside the file. Parser bugs of this kind have led to memory corruption in GGUF loaders.",
         "Do not load the file with native parsers.";
+    GGUF_NONSTANDARD = "MS804", "gguf-nonstandard", Low, "CWE-20",
+        "A GGUF tensor has five dimensions or a type id this scanner does not know. llama.cpp rejects such files; writers for video models and quantization forks produce them. Six or more dimensions are reported as malformed.",
+        "Load the file only with the tool that wrote it.";
     SAFETENSORS_HEADER = "MS901", "safetensors-invalid-header", High, "CWE-20",
         "The safetensors header is not valid UTF-8 JSON of the expected shape, or its length is outside the file.",
         "Do not load the file.";
@@ -229,6 +241,12 @@ rules! {
     HF_REMOTE_CODE = "MS1003", "hf-remote-code", Low, "CWE-829",
         "A Hugging Face config.json maps model classes to code in the repository (auto_map), so loading needs trust_remote_code=True.",
         "Review the repository code before enabling trust_remote_code.";
+    CONFIG_YAML_TAG = "MS1101", "config-unsafe-yaml-tag", High, "CWE-502",
+        "A YAML file uses a PyYAML object tag (!!python/object, !!python/object/apply and similar). An unsafe yaml.load builds the named Python object, and apply or new tags call it.",
+        "Load YAML with yaml.safe_load only; remove the tag.";
+    CONFIG_TARGET = "MS1102", "config-instantiate-target", High, "CWE-470",
+        "A config names a callable in a _target_ entry that runs commands or code or reaches files or the network. Hydra-style instantiate calls whatever the config names, so loading the model through such a config runs it.",
+        "Do not instantiate objects from this config; check who wrote it.";
 }
 
 /// Look up a rule by id.
