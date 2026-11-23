@@ -28,11 +28,13 @@ AI model files can hide code that runs the moment you load them. This tool reads
   file with five scanners and flags 14 of those 17. The other three were marked safe or still
   waiting on 2026-11-23: two ONNX files that reach outside their own folder, and a compressed
   pickle that calls `eval`.
-- **It reads nine kinds of model file.** The other tools mostly read one (pickle). The files
-  they missed were mostly in formats they do not open, or were compressed.
+- **It reads the common model formats in one pass:** pickle, PyTorch, joblib, NumPy, Keras,
+  ONNX, GGUF, safetensors and more. The other tools read fewer, and the files they missed
+  were in formats they do not open or were compressed.
 - **It is fast and small.** A 284 MB model takes 0.01 seconds and 4 MB of memory. On a 31 MB
   pickle it takes 0.24 seconds where the others take 11, 12 and 103 seconds.
-- **It rarely cries wolf.** 31 false alarms in 7,563 clean files, which is 0.4%.
+- **It rarely cries wolf.** 31 false alarms in 7,563 clean files, which is 0.4%. The two
+  quietest tools raise 1 each, on the smaller set of files they can read.
 
 **What it has not done:** found an attack nobody knew about. All 17 were already known: 13
 sit in repositories that say they are security tests, and Hugging Face already flags the
