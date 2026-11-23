@@ -99,6 +99,25 @@ Pickle-family files only (every tool scanned the same files):
 Wall time on the Hub corpus: msscan scanned 7,607 files in 9.8 s (one process, Python API); on the 2,244
 files the other tools received, picklescan 75.3 s, modelscan 33.4 s, fickling 683.4 s.
 
+### Were the payload files already known? (checked 2026-11-23)
+
+`benchmarks/hf/hub_status.py` reads the Hub's published scan result for each of the 17
+payload files and checks whether its repository presents itself as security test material
+(by name or in its model card). Output: `benchmarks/results/hf_hub_status.json`.
+
+| | Files |
+|---|---:|
+| Payload files, in 6 repositories | 17 |
+| Flagged by the Hub (10 unsafe, 4 suspicious) | 14 |
+| Not flagged by the Hub (2 safe, 1 with a scan still queued) | 3 |
+| In repositories that present themselves as security tests | 13 |
+| Neither flagged by the Hub nor in a declared test repository | 0 |
+
+No payload file is a discovery. The three the Hub does not flag (two ONNX external-data
+traversals and one compressed pickle calling `builtins.eval`) sit in declared scanner-test
+repositories. Files were matched by path on `main`, not by hash, and the statuses are a
+snapshot.
+
 ## 3. Speed and memory
 
 `make speed`. Median of three runs per tool and file, each in a fresh process under
@@ -152,6 +171,7 @@ make build
 make corpus validate compare        # synthetic corpus (about 1 MB)
 make hf-list hf-fetch               # Hub corpus (2.5 GB stored, rate limited)
 make hf-compare hf-review           # 13 minutes here, mostly fickling
+make hf-status                      # asks the Hub about the 17 payload files (needs the private rows)
 make speed                          # 8 minutes here, mostly fickling on the plain-data pickle
 ```
 
