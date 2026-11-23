@@ -53,6 +53,11 @@ RUNNERS = {
         "r = fickling.scan_zip_archive(P, graceful=True) if props['is_torch_zip'] or props['is_standard_zip'] "
         "else fickling.scan_file(P, graceful=True)"
     ),
+    "modelaudit": (
+        "import os; os.environ['PROMPTFOO_DISABLE_TELEMETRY'] = '1'\n"
+        "from modelaudit.core import scan_model_directory_or_file\n"
+        "r = scan_model_directory_or_file(P)"
+    ),
     "msscan-python": "import msscan; r = msscan.scan_file(P)",
 }
 

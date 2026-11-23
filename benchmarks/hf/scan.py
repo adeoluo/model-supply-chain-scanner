@@ -1,4 +1,4 @@
-"""Scan the Hub corpus with all four tools and write pseudonymous results.
+"""Scan the Hub corpus with all five tools and write pseudonymous results.
 
 msscan scans every stored file in process (header stubs with their real size, so offsets are
 checked against the full file) and contributes the GGUF headers scanned during collection. The
@@ -48,7 +48,7 @@ def main() -> None:
     ap = argparse.ArgumentParser(description=__doc__)
     ap.add_argument("--data", type=Path, required=True)
     ap.add_argument("--out", type=Path, required=True)
-    ap.add_argument("--tools", default="picklescan,modelscan,fickling")
+    ap.add_argument("--tools", default="picklescan,modelscan,fickling,modelaudit")
     args = ap.parse_args()
     priv = args.data / "private"
     salt = (priv / "salt").read_text().strip()

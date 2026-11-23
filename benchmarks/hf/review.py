@@ -60,6 +60,7 @@ PAYLOAD_RULES = {"MS502", "MS701", "MS801"}
 CODE_RULES = {"MS501", "MS503", "MS505", "MS402", "MS1003"}
 NONSTANDARD_RULES = {
     "MS803",
+    "MS804",
     "MS901",
     "MS902",
     "MS302",
@@ -78,6 +79,8 @@ COLUMNS = [
     ("modelscan", "default", "modelscan"),
     ("fickling", "overtly", "fickling (overtly malicious)"),
     ("fickling", "default", "fickling"),
+    ("modelaudit", "critical", "ModelAudit (critical)"),
+    ("modelaudit", "default", "ModelAudit"),
 ]
 
 
@@ -175,8 +178,9 @@ def main() -> None:
     md = [
         f"Hub corpus: {len(rows)} files from {corpus['summary']['repositories']} repositories.",
         "",
-        "All files (picklescan, modelscan and fickling receive the pickle-family, Keras, ONNX "
-        "and SavedModel files stored in full; header stubs and JSON configs are msscan only):",
+        "All files (picklescan, modelscan, fickling and ModelAudit receive the pickle-family, "
+        "Keras, ONNX and SavedModel files stored in full; header stubs and JSON configs are "
+        "msscan only):",
         "",
         table(rows, labels, None),
         "",

@@ -1,4 +1,4 @@
-.PHONY: help setup build develop fixtures lint format type test rust-test coverage all corpus validate compare third-party hf-list hf-fetch hf-compare hf-status speed rules-doc diagram docker demo clean changelog cut-release
+.PHONY: help setup build develop fixtures lint format type test rust-test coverage all corpus validate compare third-party hf-list hf-fetch hf-compare hf-heldout hf-status speed rules-doc diagram docker demo clean changelog cut-release
 
 LLVM ?= /opt/homebrew/opt/llvm/bin
 DATA ?= ../.bench-data/model-supply-chain-scanner
@@ -70,11 +70,18 @@ hf-list: ## List Hugging Face Hub repositories and files (public endpoints, no t
 hf-fetch: ## Fetch headers and small files from the Hub (resumable, 2.5 GB budget)
 	$(BENCH) benchmarks/hf/collect.py fetch --data $(DATA)/hf
 
-hf-compare: ## Scan the Hub corpus with all four tools (benchmarks/results/hf_corpus.json)
+hf-compare: ## Scan the Hub corpus with all five tools (benchmarks/results/hf_corpus.json)
 	$(BENCH) benchmarks/hf/scan.py --data $(DATA)/hf --out benchmarks/results/hf_corpus
 
 hf-review: ## Label flagged Hub files and tabulate flag rates (benchmarks/results/hf_review.*)
 	$(BENCH) benchmarks/hf/review.py --data $(DATA)/hf --out benchmarks/results/hf_review
+
+hf-heldout: ## Draw, fetch, scan and cross-check a second Hub sample of the newest repositories (never tuned on)
+	$(BENCH) benchmarks/hf/collect.py list --data $(DATA)/hf_heldout --listing heldout --exclude $(DATA)/hf/private/repos.jsonl
+	$(BENCH) benchmarks/hf/collect.py fetch --data $(DATA)/hf_heldout --per-kind 2
+	$(BENCH) benchmarks/hf/scan.py --data $(DATA)/hf_heldout --out benchmarks/results/hf_heldout
+	$(BENCH) benchmarks/hf/review.py --data $(DATA)/hf_heldout --corpus benchmarks/results/hf_heldout.json --out benchmarks/results/hf_heldout_review
+	$(BENCH) benchmarks/hf/hub_status.py --data $(DATA)/hf_heldout --review benchmarks/results/hf_heldout_review.json --out benchmarks/results/hf_heldout_hub_status
 
 hf-status: ## Ask the Hub what its own scanners say about the payload files (benchmarks/results/hf_hub_status.json)
 	$(BENCH) benchmarks/hf/hub_status.py --data $(DATA)/hf --out benchmarks/results/hf_hub_status

@@ -111,11 +111,27 @@ LISTINGS = [
     ("tf", {"sort": "downloads", "filter": "tf"}, 150),
 ]
 
+# A second sample that the scanner's rules were never tuned on: the newest repositories, which
+# are also the ones other scanners have had the least time to look at.
+HELDOUT_LISTINGS = [
+    ("new", {"sort": "createdAt"}, 1200),
+    ("new-pytorch", {"sort": "createdAt", "filter": "pytorch"}, 500),
+    ("new-sklearn", {"sort": "createdAt", "filter": "sklearn"}, 400),
+    ("new-joblib", {"sort": "createdAt", "filter": "joblib"}, 300),
+    ("new-keras", {"sort": "createdAt", "filter": "keras"}, 400),
+    ("new-onnx", {"sort": "createdAt", "filter": "onnx"}, 250),
+    ("new-gguf", {"sort": "createdAt", "filter": "gguf"}, 150),
+]
+# Kinds added after the first sample was drawn; selecting them there would change that sample.
+EXTRA_KINDS = False
 
-def cmd_list(data: Path) -> None:
+
+def cmd_list(data: Path, listing: str = "default", exclude: Path | None = None) -> None:
     out = data / "private" / "repos.jsonl"
+    out.parent.mkdir(parents=True, exist_ok=True)
+    skip = {json.loads(line)["id"] for line in exclude.open()} if exclude else set()
     seen: dict[str, dict[str, Any]] = {}
-    for name, params, want in LISTINGS:
+    for name, params, want in HELDOUT_LISTINGS if listing == "heldout" else LISTINGS:
         url: str | None = f"{API}/models"
         q: dict[str, Any] = {
             **params,
@@ -128,7 +144,7 @@ def cmd_list(data: Path) -> None:
             r = get(url, API_GATE, params=q)
             r.raise_for_status()
             for m in r.json():
-                if m.get("private") or m.get("gated"):
+                if m.get("private") or m.get("gated") or m["id"] in skip:
                     continue
                 got += 1
                 seen.setdefault(
@@ -171,6 +187,8 @@ def kind_of(path: str) -> str | None:
     if base.endswith(FULL_EXT):
         if base.endswith(".pb") and base not in ("saved_model.pb", "keras_metadata.pb"):
             return None
+        return "full"
+    if EXTRA_KINDS and base.endswith((".yaml", ".yml", ".jinja", ".7z", ".tar", ".nemo")):
         return "full"
     return None
 
@@ -477,10 +495,18 @@ def main() -> None:
     ap.add_argument("--budget-gb", type=float, default=2.5)
     ap.add_argument("--seed", type=int, default=0)
     ap.add_argument("--retry-large", action="store_true", help="retry files skipped as too large")
+    ap.add_argument("--listing", choices=["default", "heldout"], default="default")
+    ap.add_argument(
+        "--exclude", type=Path, help="repos.jsonl of a sample whose repositories to skip"
+    )
     a = ap.parse_args()
     os.makedirs(a.data / "private", exist_ok=True)
+    global EXTRA_KINDS
+    EXTRA_KINDS = a.listing == "heldout" or (a.data / "private" / "heldout").exists()
     if a.stage == "list":
-        cmd_list(a.data)
+        cmd_list(a.data, a.listing, a.exclude)
+        if a.listing == "heldout":
+            (a.data / "private" / "heldout").write_text("drawn with --listing heldout\n")
     else:
         cmd_fetch(a.data, a.workers, a.per_kind, a.max_file_mb, a.budget_gb, a.seed, a.retry_large)
 
