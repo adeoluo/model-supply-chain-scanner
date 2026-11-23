@@ -28,7 +28,7 @@ reports what loading it would do.
 
 | Threat | Vector | Impact | Mitigation in msscan |
 |---|---|---|---|
-| Code execution on load | `REDUCE`, `INST`, `OBJ`, `NEWOBJ` of dangerous globals | Full compromise | Symbolic VM, denylist of 90 modules and 69 names (MS101) |
+| Code execution on load | `REDUCE`, `INST`, `OBJ`, `NEWOBJ` of dangerous globals | Full compromise | Symbolic VM, denylist of 161 modules and 145 names, plus 76 loader-style names refused inside library namespaces (MS101) |
 | Evasion by computed imports | `STACK_GLOBAL` fed by `_codecs.encode(..., "rot13")` or memo tricks | Bypasses import lists | Operands tracked through memo and calls (MS103) |
 | Evasion by attribute writes | `BUILD` sets `__setstate__`, or patches an imported class | Code execution or tampering | Dunder and global-target `BUILD` detection (MS105) |
 | Evasion by indirection | `functools.partial(os.getcwd)()`, `getattr(__import__("os"), ...)()` | Bypasses callee checks | Globals in call arguments count as called; calls of call results (MS110) |
@@ -73,9 +73,11 @@ and Value Chain and Component Integration risks.
 ## Residual risk
 
 - Functions outside the denylist that run code are reported only as unknown or library calls
-  (medium or low), below the default failure threshold. The benchmark's hard tier shows two such
-  techniques (`logging.config.dictConfig`, `typing._eval_type`) that pass at the default
-  threshold.
+  (medium or low), below the default failure threshold. Outside reviewers found several such
+  functions inside trusted library namespaces (`torch.utils.collect_env.run`, a pickled Keras
+  `Lambda`, `transformers.dynamic_module_utils`); they and the loader-style names around them
+  are now refused, but a code-running library function that is neither cataloged nor named
+  like a loader still passes.
 - TorchScript code, TFLite, Core ML, MLflow, TensorRT and other formats are not analyzed.
 - A model can be harmful without code: poisoned or backdoored weights are out of scope.
 - `weights_only=True` loading in PyTorch 2.6 and later already blocks most pickle payloads;

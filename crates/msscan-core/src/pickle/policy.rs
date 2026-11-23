@@ -241,6 +241,54 @@ const DANGEROUS_MODULES: &[&str] = &[
     "keras.utils.generic_utils",
     "tensorflow.python.ops.script_ops",
     "tensorflow.io.gfile",
+    // Loaders of code, checkpoints and remote files inside namespaces that are otherwise
+    // treated as libraries. A model never needs to call these while it is being unpickled.
+    "transformers.dynamic_module_utils",
+    "transformers.utils.hub",
+    "tensorflow.saved_model",
+    "tensorflow.python.saved_model.load",
+    "tensorflow.python.framework.load_library",
+    "huggingface_hub.file_download",
+    "huggingface_hub._snapshot_download",
+    "hydra.utils",
+    "hydra._internal.utils",
+    "hydra._internal.instantiate",
+    "omegaconf.resolvers",
+    "joblib.externals",
+    "PIL.ImageMath",
+    "PIL.ImageShow",
+    "PIL.ImageGrab",
+    "scipy.weave",
+    "nltk.downloader",
+    "nltk.data",
+    "gensim.downloader",
+    "spacy.cli",
+    "fastai.data.external",
+    "accelerate.launchers",
+    "accelerate.commands",
+    "diffusers.utils.dynamic_modules_utils",
+    "diffusers.pipelines.pipeline_loading_utils",
+    "pytorch_lightning.utilities.imports",
+    "lightning.pytorch.utilities.imports",
+    "lightning_fabric.utilities.imports",
+    "lightning_fabric.utilities.cloud_io",
+    "mmcv.fileio",
+    "ultralytics.utils.checks",
+    "ultralytics.utils.downloads",
+    "onnx.hub",
+    "fairseq.checkpoint_utils",
+    "fairseq.hub_utils",
+    "speechbrain.utils.fetching",
+    "allennlp.common.file_utils",
+    "allennlp.models.archival",
+    "flair.file_utils",
+    "stable_baselines3.common.save_util",
+    "timm.models._hub",
+    "timm.models._builder",
+    "open_clip.pretrained",
+    "torchvision.datasets.utils",
+    "torchaudio.utils.download",
+    "peft.utils.hub_utils",
     "pydoc",
     "doctest",
     "idlelib",
@@ -335,7 +383,168 @@ const DANGEROUS_NAMES: &[(&str, &str)] = &[
     ("keras.models", "load_model"),
     ("keras.saving", "load_model"),
     ("tensorflow.keras.models", "load_model"),
+    ("keras.models", "model_from_json"),
+    ("keras.models", "model_from_config"),
+    ("keras.models", "model_from_yaml"),
+    ("tensorflow.keras.models", "model_from_json"),
+    ("tensorflow.keras.models", "model_from_config"),
+    ("transformers", "pipeline"),
+    ("transformers.pipelines", "pipeline"),
+    ("keras.saving.pickle_utils", "deserialize_model_from_bytecode"),
+    ("keras.src.saving.pickle_utils", "deserialize_model_from_bytecode"),
+    ("keras.src.saving.keras_saveable", "KerasSaveable._unpickle_model"),
+    ("scipy.io", "loadmat"),
+    ("scipy.io", "savemat"),
+    ("scipy.io", "mmread"),
+    ("mmcv.utils.config", "Config.fromfile"),
+    ("mmengine.config", "Config.fromfile"),
+    ("keras.utils", "get_file"),
+    ("keras.utils", "custom_object_scope"),
+    ("keras.utils", "deserialize_keras_object"),
+    ("keras.layers", "deserialize"),
+    ("tensorflow.keras.utils", "get_file"),
+    ("tensorflow", "py_function"),
+    ("tensorflow", "numpy_function"),
+    ("tensorflow", "py_func"),
+    ("tensorflow", "load_library"),
+    ("tensorflow", "load_op_library"),
+    ("tensorflow.io", "read_file"),
+    ("tensorflow.io", "write_file"),
+    ("huggingface_hub", "hf_hub_download"),
+    ("huggingface_hub", "snapshot_download"),
+    ("huggingface_hub", "cached_download"),
+    ("huggingface_hub", "hf_hub_url"),
+    ("pandas", "read_csv"),
+    ("pandas", "read_json"),
+    ("pandas", "read_html"),
+    ("pandas", "read_xml"),
+    ("pandas", "read_sql"),
+    ("pandas", "read_sql_query"),
+    ("pandas", "read_parquet"),
+    ("pandas", "read_feather"),
+    ("pandas", "read_hdf"),
+    ("pandas", "read_excel"),
+    ("pandas", "read_table"),
+    ("pandas", "read_fwf"),
+    ("pandas", "read_clipboard"),
+    ("pandas.core.frame", "DataFrame.to_pickle"),
+    ("pandas.core.frame", "DataFrame.to_csv"),
+    ("pandas.core.frame", "DataFrame.query"),
+    ("pandas.core.frame", "DataFrame.eval"),
+    ("numpy", "genfromtxt"),
+    ("numpy", "loadtxt"),
+    ("numpy", "savetxt"),
+    ("numpy", "savez"),
+    ("numpy", "DataSource"),
+    ("numpy.lib.npyio", "DataSource"),
+    ("PIL.Image", "open"),
+    ("PIL.Image", "Image.save"),
+    ("PIL.Image", "Image.show"),
+    ("xgboost", "Booster.load_model"),
+    ("xgboost", "Booster.save_model"),
+    ("lightgbm", "Booster.save_model"),
+    ("onnx", "save"),
+    ("omegaconf", "OmegaConf.register_new_resolver"),
+    ("pathlib", "Path.write_text"),
+    ("pathlib", "Path.write_bytes"),
+    ("pathlib", "Path.read_text"),
+    ("pathlib", "Path.read_bytes"),
+    ("pathlib", "Path.unlink"),
+    ("pathlib", "Path.rename"),
+    ("pathlib", "Path.open"),
+    ("pathlib", "Path.chmod"),
+    ("pathlib", "Path.symlink_to"),
+    ("codecs", "open"),
 ];
+
+/// Final name components that load code, deserialize a second payload, fetch a remote file
+/// or run a command. Inside a library namespace a callable with one of these names is treated
+/// as dangerous, whatever module it lives in, so a new loader in a trusted library does not
+/// pass as ordinary library code. Matched case-sensitively: classes are not named like this.
+const LOADER_NAMES: &[&str] = &[
+    "load",
+    "loads",
+    "load_model",
+    "load_module",
+    "load_state_dict_from_url",
+    "load_checkpoint",
+    "load_from_checkpoint",
+    "load_from_hub",
+    "load_from_disk",
+    "load_library",
+    "load_op_library",
+    "load_url",
+    "load_learner",
+    "load_pickle",
+    "load_object",
+    "load_dataset",
+    "from_pretrained",
+    "from_single_file",
+    "from_file",
+    "from_url",
+    "from_hub",
+    "from_config_file",
+    "read_pickle",
+    "unpickle",
+    "import_module",
+    "import_from_string",
+    "import_string",
+    "import_class",
+    "import_object",
+    "get_class_from_dynamic_module",
+    "get_cached_module_file",
+    "get_class_in_module",
+    "resolve_trust_remote_code",
+    "custom_object_scope",
+    "instantiate",
+    "locate",
+    "get_method",
+    "get_class",
+    "get_object",
+    "get_obj_from_str",
+    "instantiate_from_config",
+    "eval",
+    "exec",
+    "execfile",
+    "compile",
+    "run",
+    "main",
+    "call",
+    "invoke",
+    "launch",
+    "download",
+    "download_url",
+    "download_url_to_file",
+    "download_file",
+    "download_from_url",
+    "download_and_extract_archive",
+    "urlretrieve",
+    "urlopen",
+    "get_file",
+    "cached_path",
+    "cached_file",
+    "cached_download",
+    "hf_hub_download",
+    "snapshot_download",
+    "extract_archive",
+    "extractall",
+    "untar_data",
+    "fromfile",
+    "attempt_load_weights",
+    "attempt_load_one_weight",
+    "torch_safe_load",
+    "check_requirements",
+    "model_from_json",
+    "model_from_config",
+    "model_from_yaml",
+    "deserialize_keras_object",
+];
+
+/// Keras classes that carry serialized Python and run it when the model is built, called or
+/// trained. Matched only inside the Keras and TensorFlow namespaces (`torchvision.transforms`
+/// also has a `Lambda`, which holds an importable callable that is classified on its own).
+const CODE_CARRYING_CLASSES: &[&str] = &["Lambda", "TFOpLambda", "SlicingOpLambda", "LambdaCallback"];
+const CODE_CARRYING_NAMESPACES: &[&str] = &["keras", "tf_keras", "tensorflow"];
 
 /// Calls that deserialize a nested payload taken from their arguments.
 const NESTED_LOADERS: &[(&str, &str)] = &[
@@ -404,6 +613,7 @@ const LIBRARY_PREFIXES: &[&str] = &[
     "safetensors",
     "statsmodels",
     "keras",
+    "tf_keras",
     "tensorflow",
     "jax",
     "flax",
@@ -514,6 +724,12 @@ pub fn classify(module: &str, name: &str) -> Tier {
         return Tier::Unknown;
     }
     if LIBRARY_PREFIXES.iter().any(|p| in_module(module, p)) {
+        let last = name.rsplit('.').next().unwrap_or(name);
+        if LOADER_NAMES.contains(&last)
+            || (CODE_CARRYING_CLASSES.contains(&last) && CODE_CARRYING_NAMESPACES.iter().any(|p| in_module(module, p)))
+        {
+            return Tier::Dangerous;
+        }
         return Tier::Library;
     }
     Tier::Unknown
@@ -532,6 +748,11 @@ pub fn catalog_sizes() -> (usize, usize, usize, usize) {
         DANGEROUS_NAMES.len(),
         LIBRARY_PREFIXES.len(),
     )
+}
+
+/// How many loader-style function names are refused inside library namespaces.
+pub fn loader_name_count() -> usize {
+    LOADER_NAMES.len()
 }
 
 #[cfg(test)]
@@ -575,6 +796,86 @@ mod tests {
             classify("transformers.commands.env", "EnvironmentCommand"),
             Tier::Unknown
         );
+    }
+
+    /// Callables that load code, a second payload or a remote file must not pass as ordinary
+    /// library code just because they live in a trusted namespace.
+    #[test]
+    fn library_namespaces_do_not_shelter_loaders() {
+        for (module, name) in [
+            ("transformers.dynamic_module_utils", "get_class_from_dynamic_module"),
+            ("transformers.dynamic_module_utils", "get_cached_module_file"),
+            ("transformers", "pipeline"),
+            ("transformers", "AutoModel.from_pretrained"),
+            (
+                "transformers.models.auto.auto_factory",
+                "_BaseAutoModelClass.from_pretrained",
+            ),
+            ("diffusers", "DiffusionPipeline.from_pretrained"),
+            ("keras.layers", "Lambda"),
+            ("keras.src.layers.core.lambda_layer", "Lambda"),
+            ("tensorflow.keras.layers", "Lambda"),
+            ("tf_keras.layers", "Lambda"),
+            ("keras.callbacks", "LambdaCallback"),
+            ("keras.models", "model_from_json"),
+            ("keras.src.saving.keras_saveable", "KerasSaveable._unpickle_model"),
+            ("keras.saving.pickle_utils", "deserialize_model_from_bytecode"),
+            ("tensorflow", "py_function"),
+            ("tensorflow.saved_model", "load"),
+            ("huggingface_hub", "hf_hub_download"),
+            ("huggingface_hub.file_download", "hf_hub_download"),
+            ("hydra.utils", "instantiate"),
+            ("hydra._internal.utils", "_locate"),
+            ("fastai.learner", "load_learner"),
+            ("ultralytics.nn.tasks", "attempt_load_weights"),
+            ("ultralytics.utils.checks", "check_requirements"),
+            ("mmcv.utils.config", "Config.fromfile"),
+            ("PIL.ImageMath", "eval"),
+            ("PIL.Image", "open"),
+            ("pandas", "read_csv"),
+            ("numpy", "genfromtxt"),
+            ("scipy.io", "loadmat"),
+            ("nltk.data", "load"),
+            ("joblib.externals.loky.backend.popen_loky_posix", "Popen"),
+            ("pathlib", "Path.write_text"),
+            ("torchvision.datasets.utils", "download_url"),
+            ("timm.models._hub", "load_state_dict_from_hf"),
+            // The rule is by name, so a loader this catalog has never heard of is caught too.
+            ("sklearn.some_future_module", "load"),
+            ("torchaudio.future", "download"),
+            ("peft.future", "from_pretrained"),
+        ] {
+            assert_eq!(classify(module, name), Tier::Dangerous, "{module}.{name}");
+        }
+    }
+
+    /// The same namespaces still classify the classes real checkpoints are made of as
+    /// library code, so the tightening does not raise alerts on ordinary models.
+    #[test]
+    fn model_classes_stay_library_code() {
+        for (module, name) in [
+            ("fastai.learner", "Learner"),
+            ("ultralytics.nn.tasks", "DetectionModel"),
+            ("mmcv.utils.config", "ConfigDict"),
+            ("gym.envs.registration", "EnvSpec"),
+            ("xgboost.callback", "EarlyStopping"),
+            ("joblib.memory", "Memory"),
+            (
+                "transformers.pipelines.text_classification",
+                "TextClassificationPipeline",
+            ),
+            ("transformers.models.bert.modeling_bert", "BertModel"),
+            ("keras.src.layers.core.dense", "Dense"),
+            ("torchvision.transforms.transforms", "Lambda"),
+            ("sentence_transformers.util", "cos_sim"),
+            ("scipy.sparse._csr", "csr_matrix"),
+            ("sklearn.pipeline", "Pipeline"),
+            ("sklearn.compose._column_transformer", "make_column_selector"),
+            ("numpy", "float64"),
+            ("pathlib", "PosixPath"),
+        ] {
+            assert_eq!(classify(module, name), Tier::Library, "{module}.{name}");
+        }
     }
 
     #[test]

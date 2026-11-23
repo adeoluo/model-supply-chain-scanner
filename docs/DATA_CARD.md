@@ -21,7 +21,8 @@ The project uses two corpora. Neither is committed: both are rebuilt by scripts 
   by construction because their loaders are not installed or were patched.
 - **Bias:** written by the author of the scanner, who knew its rules. It is a regression gate
   and a map of which tool handles which technique, not an estimate of recall on unknown attacks.
-  The hard tier (3 files) uses functions outside the denylist on purpose.
+  The hard tier (3 files) was written to use functions outside the denylist; those functions
+  were denylisted in version 0.1.1, so the tier is now a regression check only.
 
 ## 2. Hugging Face Hub corpus (`benchmarks/hf/collect.py`)
 

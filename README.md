@@ -69,22 +69,28 @@ all 72 benign files loaded. Raw results:
 
 | Tool | Malicious detected (116) | Benign flagged (78) | Files not scanned or with errors |
 |---|---:|---:|---:|
-| **msscan** (high) | **114 = 0.983 (0.939 to 0.995)** | **0 = 0.000 (0.000 to 0.047)** | 0 |
-| msscan (medium) | 115 = 0.991 (0.953 to 0.998) | 0 = 0.000 (0.000 to 0.047) | 0 |
+| **msscan** (high) | **116 = 1.000 (0.968 to 1.000)** | **0 = 0.000 (0.000 to 0.047)** | 0 |
+| msscan (medium) | 116 = 1.000 (0.968 to 1.000) | 0 = 0.000 (0.000 to 0.047) | 0 |
 | picklescan | 69 = 0.595 (0.504 to 0.680) | 0 = 0.000 (0.000 to 0.047) | 10 |
 | picklescan `--strict` | 77 = 0.664 (0.574 to 0.743) | 22 = 0.282 (0.194 to 0.390) | 10 |
 | modelscan | 40 = 0.345 (0.265 to 0.435) | 0 = 0.000 (0.000 to 0.047) | 90 |
 | fickling | 73 = 0.629 (0.539 to 0.712) | 31 = 0.397 (0.296 to 0.508) | 93 |
 | fickling (overtly malicious only) | 69 = 0.595 (0.504 to 0.680) | 5 = 0.064 (0.028 to 0.141) | 93 |
 
-On the 73 plain pickle and PyTorch payloads the tools are close (msscan 71/73, picklescan
+On the 73 plain pickle and PyTorch payloads the tools are close (msscan 73/73, picklescan
 `--strict` 72/73, fickling 72/73); the gap comes from formats the other tools do not read
 (GGUF templates, Keras configs, SavedModel ops, ONNX paths, safetensors headers) and from
-compressed joblib streams. msscan misses two of the three "hard" pickles, which call functions
-outside its denylist on purpose (it reports one of them at medium); picklescan `--strict` and
-fickling catch all three because they flag every unknown global, which is also why they flag
-28% and 40% of the benign files. The corpus was written by the author of the scanner, so it is
-a regression gate and a map of coverage, not an estimate of recall on unknown attacks.
+compressed joblib streams.
+
+**Read the 116/116 for what it is.** The corpus was written by the author of the scanner, so
+it is a regression gate and a map of coverage, not an estimate of recall on unknown attacks.
+Until version 0.1.1 msscan missed two of the three "hard" pickles, which were written to call
+functions outside its denylist (`logging.config.dictConfig`, `typing._eval_type`,
+`pydoc.locate`). Those functions were then added to the denylist, so the three files now only
+show that known gadgets stay caught. picklescan `--strict` and fickling caught all three from
+the start because they flag every unknown global, which is also why they flag 28% and 40% of
+the benign files. What the scanner does about gadgets it has not been told about is described
+under [Bypasses found by outside reviewers](#bypasses-found-by-outside-reviewers).
 
 ### Hugging Face Hub corpus (7,607 real files from 2,888 repositories)
 
@@ -328,13 +334,49 @@ a Docker build probed over HTTP. CodeQL runs on pushes to main and weekly.
 - **Hub data:** files were read for security analysis and not redistributed; repository names
   stay outside the repository and no repository owner was contacted.
 
+## Bypasses found by outside reviewers
+
+Three independent reviews in November 2026 probed the scanner with pickles their authors
+wrote without seeing its rules. Every bypass they reported is listed here with its fix; each
+has a regression test.
+
+| Reported bypass | Verdict when reported | Cause | Now |
+|---|---|---|---|
+| `torch.utils.collect_env.run` (runs a shell command), `functools.partial`, `pydoc.pipepager` | clean, clean, medium | any callable under a library namespace passed unless denylisted by exact name | critical (MS101) |
+| A protocol 0 pickle with no header and no final `STOP`, named `.pkl` or `.pt` | `unknown`, clean, risk 0 | format detection required a header or a terminating `STOP`; Python runs the payload before raising | malicious (MS101 and MS109) |
+| A pickled `keras.layers.Lambda`; `transformers.dynamic_module_utils.get_class_from_dynamic_module` | low or clean | same namespace rule as the first row | critical when called, high when referenced |
+
+The third report showed that fixing names one at a time does not scale, so the fix is a rule
+rather than three more entries: a catalog of code, checkpoint and remote-file loaders inside
+library namespaces (161 denylisted modules, 145 exact names) plus a refusal of loader-style
+names in any library module, so `sklearn.some_future_module.load` is caught without being
+listed.
+
+The cost was measured, not assumed. Every global referenced by the 7,607 Hub files was
+recorded when the corpus was scanned (2,182 distinct module and name pairs); re-classifying
+all of them under the new policy changed the tier of none, so no Hub file changes verdict.
+The 78 benign files of the authored corpus still raise nothing. The first draft of the
+catalog would have flagged ordinary checkpoints, because `fastai.learner`,
+`ultralytics.nn.tasks`, `mmcv.utils.config` and `gym.envs.registration` hold both loaders and
+the classes real models are made of; those are matched by function name instead, and a test
+pins the classes as library code.
+
+What this does not establish: the reviewers found these with a few dozen probes each, which
+says more gadgets exist. The recorded Hub imports cover the files as they were on the day
+of the scan; the files themselves were not kept, so nothing else about that corpus was rerun.
+
 ## Limitations
 
 - A static scanner sees only what the file declares. Pickles that reach dangerous behaviour
-  through functions outside the denylist (the "hard" tier) are reported at medium or not at all,
-  and attacks that live in the weights (backdoors, poisoned behaviour) are out of scope.
-- The allowlist and library tiers trade alerts for recall: a malicious function inside a trusted
-  library namespace would be rated as library code.
+  through functions outside the denylist are reported at medium or not at all, and attacks
+  that live in the weights (backdoors, poisoned behaviour) are out of scope.
+- The allowlist and library tiers trade alerts for recall. Inside the 79 namespaces treated
+  as libraries, a callable is rated dangerous if its module or exact name is cataloged or if
+  its final name is one of 76 loader-style names (`load`, `from_pretrained`, `instantiate`,
+  `download`, `run`, ...). A code-running function in a trusted library that is neither
+  cataloged nor named like a loader is still rated as library code (low when called, silent
+  when only referenced). The catalog was built by reading library sources, not by executing
+  every function, so it is incomplete by construction.
 - Headers-only scanning of the Hub corpus skips archive members other than pickles and configs,
   so zip-slip names and decompression bombs in large `.keras` archives were not measured there.
 - Keras resolution rules differ across versions; MS505 assumes a loader might import the

@@ -49,13 +49,13 @@ Versions: msscan 0.1.0 picklescan 1.0.5 modelscan 0.8.8 fickling 0.1.13
 | malicious: numpy / code-execution | 2 | 2/2 | 2/2 | 2/2 | 2/2 | 0/2 | 0/2 | 0/2 |
 | malicious: onnx / file-access | 3 | 3/3 | 3/3 | 0/3 | 0/3 | 0/3 | 0/3 | 0/3 |
 | malicious: pickle / code-execution | 63 | 63/63 | 63/63 | 59/63 | 62/63 | 35/63 | 62/63 | 61/63 |
-| malicious: pickle / hard | 3 | 1/3 | 2/3 | 1/3 | 3/3 | 0/3 | 3/3 | 2/3 |
+| malicious: pickle / hard | 3 | 3/3 | 3/3 | 1/3 | 3/3 | 0/3 | 3/3 | 2/3 |
 | malicious: pytorch / code-execution | 7 | 7/7 | 7/7 | 6/7 | 7/7 | 3/7 | 7/7 | 5/7 |
 | malicious: safetensors / structure | 8 | 8/8 | 8/8 | 0/8 | 0/8 | 0/8 | 0/8 | 0/8 |
 | malicious: savedmodel / code-execution | 2 | 2/2 | 2/2 | 0/2 | 0/2 | 0/2 | 0/2 | 0/2 |
 | malicious: savedmodel / file-access | 3 | 3/3 | 3/3 | 0/3 | 0/3 | 0/3 | 0/3 | 0/3 |
 
-| Detection rate (malicious) | 116 | 114/116 = 0.983 (0.939 to 0.995) | 115/116 = 0.991 (0.953 to 0.998) | 69/116 = 0.595 (0.504 to 0.680) | 77/116 = 0.664 (0.574 to 0.743) | 40/116 = 0.345 (0.265 to 0.435) | 73/116 = 0.629 (0.539 to 0.712) | 69/116 = 0.595 (0.504 to 0.680) |
+| Detection rate (malicious) | 116 | 116/116 = 1.000 (0.968 to 1.000) | 116/116 = 1.000 (0.968 to 1.000) | 69/116 = 0.595 (0.504 to 0.680) | 77/116 = 0.664 (0.574 to 0.743) | 40/116 = 0.345 (0.265 to 0.435) | 73/116 = 0.629 (0.539 to 0.712) | 69/116 = 0.595 (0.504 to 0.680) |
 | False positive rate (benign) | 78 | 0/78 = 0.000 (0.000 to 0.047) | 0/78 = 0.000 (0.000 to 0.047) | 0/78 = 0.000 (0.000 to 0.047) | 22/78 = 0.282 (0.194 to 0.390) | 0/78 = 0.000 (0.000 to 0.047) | 31/78 = 0.397 (0.296 to 0.508) | 5/78 = 0.064 (0.028 to 0.141) |
 
 | Files not scanned or with errors | | 0 | 0 | 10 | 10 | 90 | 93 | 93 |
@@ -117,8 +117,17 @@ is read.
 
 ## Error analysis
 
-- **Synthetic misses (msscan at high):** two of the three "hard" pickles, which reach behaviour
-  through functions outside the denylist on purpose; one is reported at medium (unknown call).
+- **Synthetic misses (msscan at high):** none in version 0.1.1 or later. Through 0.1.0 it
+  missed two of the three "hard" pickles (`logging.config.dictConfig`, `typing._eval_type`),
+  which were written to reach behaviour through functions outside the denylist. Those
+  functions and `pydoc.locate` were then denylisted, so the hard tier now only shows that
+  known gadgets stay caught; it no longer says anything about unknown ones. The table above
+  was regenerated on 2026-11-23 (the committed copy had not been rerun after that change).
+- **Bypasses reported by outside reviewers** (November 2026) and the policy change that
+  followed are listed in the README under "Bypasses found by outside reviewers". Re-classifying
+  the 2,182 distinct globals recorded from the 7,607 Hub files under the new policy changed
+  the tier of none of them. The Hub files were not kept, so the Hub scan itself was not rerun
+  and its figures below are from version 0.1.0.
 - **Hub alerts without an attack (31 at high):** 11 Keras Lambda layers (code in the file by
   design), 9 GGUF files outside llama.cpp's limits (5-D tensors from video diffusion models,
   type ids from forks), 7 pickles calling `dill` internals or `getattr` or writing dunder
@@ -130,7 +139,7 @@ is read.
   "function"}` or `__main__` are resolved by name among Keras built-ins and caller-supplied
   custom objects, so they now report MS503 (low); third-party modules got their own medium rule
   (MS505); `torch.distributed` tensor and device-mesh classes moved from the denylist to library
-  code. The synthetic results were rerun after the change and did not move (114/116, 0/78).
+  code. The synthetic results were rerun after that change and did not move (then 114/116, 0/78).
 - **Security-test files msscan does not flag:** weight backdoors (out of scope), an ONNX
   docstring injection, safetensors files with unusual tensor names, a zip-slip `.keras` and a
   decompression-bomb `.keras` whose offending members were not fetched by headers-only
