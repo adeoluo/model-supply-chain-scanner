@@ -18,7 +18,7 @@ flowchart LR
         direction TB
         Files[("Model files<br/>memory-mapped")]:::data
         Sniff["Format detection<br/>magic bytes"]:::control
-        Zip["Zip reader<br/>cross-checks"]:::core
+        Zip["Zip, 7z, tar<br/>cross-checks"]:::core
         Decomp["Decompression<br/>size-limited"]:::control
         Files --> Sniff --> Zip ~~~ Decomp
     end
@@ -26,19 +26,20 @@ flowchart LR
     subgraph Analyzers["Analyzers"]
         direction TB
         VM["Pickle VM<br/>symbolic opcodes"]:::core
-        Policy["Global tiers<br/>allow, deny"]:::control
+        Policy["Global tiers<br/>allow, deny, shape"]:::control
         Graphs["Graph checks<br/>Keras, TF, ONNX"]:::core
+        Code["Hidden code<br/>bytecode, payloads"]:::core
         Headers["Header checks<br/>GGUF, safetensors"]:::core
-        Jinja["Chat templates<br/>injection"]:::core
+        Jinja["Templates, YAML<br/>injection, targets"]:::core
         Limits["Limits<br/>opcodes, sizes"]:::control
-        Limits ~~~ VM --> Policy ~~~ Graphs ~~~ Headers --> Jinja
+        Limits ~~~ VM --> Policy ~~~ Graphs --> Code ~~~ Headers --> Jinja
     end
 
     subgraph Out["Outputs, evaluation"]
         direction TB
         Reports["Reports<br/>text, JSON, SARIF"]:::obs
         Metrics["Metrics<br/>Prometheus text"]:::obs
-        Bench["Inert corpus<br/>validated"]:::obs
+        Bench["Corpora<br/>own, third-party"]:::obs
         Hub["Hub corpus<br/>headers, stubs"]:::obs
         Score["Verdict<br/>noisy-or risk"]:::control
         Score --> Reports ~~~ Metrics ~~~ Bench ~~~ Hub
