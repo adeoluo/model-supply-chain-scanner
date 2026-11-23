@@ -159,6 +159,8 @@ struct Shared<'a> {
     const_budget: usize,
     /// Constants found to be pickles: start offset and the worst severity inside.
     embedded: HashMap<usize, Severity>,
+    /// Imports used as a lookup whose result was resolved statically, with the number of uses.
+    resolved_lookups: HashMap<u32, u32>,
 }
 
 /// String constants inspected for hidden payloads per stream; the rest is reported unscanned.
@@ -494,8 +496,69 @@ impl<'s, 'a> Vm<'s, 'a> {
         }
     }
 
+    /// Lookups whose result is known without running them: `getattr(Class, "name")`, which is
+    /// how a method reference pickles, and dill's `_load_type("set")`, which is how dill names a
+    /// builtin type. The result is the global they resolve to, so it is classified like any other
+    /// (`getattr(os.path, "os")` is still dangerous, and calling the method is still refused).
+    fn resolve_lookup(&mut self, module: &str, name: &str, args: u32, off: usize) -> Option<u32> {
+        let items: Vec<u32> = self.items(args).to_vec();
+        match (module, name, items.as_slice()) {
+            ("builtins", "getattr", [target, attr]) => {
+                let attr = self.str_of(*attr)?.to_string();
+                let Node::Global(g) = self.nodes[*target as usize] else {
+                    return None;
+                };
+                if attr.is_empty() || !attr.chars().all(|c| c.is_ascii_alphanumeric() || c == '_') {
+                    return None;
+                }
+                let (m, n) = {
+                    let imp = &self.sh.imports[g as usize];
+                    (imp.module.clone(), format!("{}.{attr}", imp.name))
+                };
+                let resolved = self.sh.import(&m, &n, off);
+                Some(self.alloc(Node::Global(resolved)))
+            }
+            ("dill._dill" | "dill", "_load_type", [type_name]) => {
+                let type_name = self.str_of(*type_name)?.to_string();
+                const PLAIN: &[&str] = &[
+                    "set",
+                    "frozenset",
+                    "dict",
+                    "list",
+                    "tuple",
+                    "int",
+                    "float",
+                    "str",
+                    "bytes",
+                    "bytearray",
+                    "bool",
+                    "complex",
+                    "slice",
+                    "range",
+                    "object",
+                ];
+                if !PLAIN.contains(&type_name.as_str()) {
+                    return None;
+                }
+                let resolved = self.sh.import("builtins", &type_name, off);
+                Some(self.alloc(Node::Global(resolved)))
+            }
+            _ => None,
+        }
+    }
+
     /// Apply a call of `func` with `args` (a tuple node) at opcode offset `off`.
     fn call(&mut self, func: u32, args: u32, off: usize) -> u32 {
+        if let Node::Global(g) = self.nodes[func as usize] {
+            let (m, n) = {
+                let imp = &self.sh.imports[g as usize];
+                (imp.module.clone(), imp.name.clone())
+            };
+            if let Some(resolved) = self.resolve_lookup(&m, &n, args, off) {
+                *self.sh.resolved_lookups.entry(g).or_insert(0) += 1;
+                return resolved;
+            }
+        }
         // Any global passed into a call can be invoked by the callee.
         self.mark_called(args);
         match self.nodes[func as usize].clone() {
@@ -723,6 +786,7 @@ impl<'s, 'a> Vm<'s, 'a> {
                     max_protocol: 0,
                     const_budget: self.sh.const_budget,
                     embedded: HashMap::new(),
+                    resolved_lookups: HashMap::new(),
                 };
                 let res = {
                     let mut vm = Vm::new(&mut sub, start);
@@ -1313,6 +1377,7 @@ fn analyze_with(data: &[u8], loc: &str, limits: Limits, depth: u8) -> PickleRepo
         max_protocol: 0,
         const_budget: CONSTANT_BUDGET,
         embedded: HashMap::new(),
+        resolved_lookups: HashMap::new(),
     };
     let mut pos = 0usize;
     let mut pickles = 0usize;
@@ -1397,7 +1462,12 @@ fn analyze_with(data: &[u8], loc: &str, limits: Limits, depth: u8) -> PickleRepo
             sh.at(0),
         ));
     }
-    for imp in &sh.imports {
+    for (index, imp) in sh.imports.iter().enumerate() {
+        // A lookup helper whose every use was resolved to the global it returns says nothing by
+        // itself; the resolved global is in this list too and is judged on its own.
+        if !imp.called && sh.resolved_lookups.contains_key(&(index as u32)) {
+            continue;
+        }
         let at = sh.at(imp.first_offset);
         let what = format!("{}.{}", imp.module, imp.name);
         let f = match (imp.tier, imp.called) {

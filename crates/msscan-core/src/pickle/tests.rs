@@ -682,3 +682,57 @@ fn project_specific_dunder_attributes_are_not_injection() {
         assert_eq!(worst(&r), Severity::Low, "{key}: {:?}", r.findings);
     }
 }
+
+#[test]
+fn lookups_with_a_known_result_are_resolved() {
+    // getattr(Class, "method") is how a method reference pickles: a reference, not a call.
+    let reference = P::new(2)
+        .global("__builtin__", "getattr")
+        .global("ultralytics.nn.modules.head", "Detect")
+        .s("forward")
+        .op(&[0x86, b'R'])
+        .stop();
+    let r = run(&reference);
+    assert!(worst(&r) < Severity::Medium, "{:?}", r.findings);
+    assert!(r.imports.iter().any(|i| i.name == "Detect.forward" && !i.called));
+    // Calling the method it returns is still refused, and a dangerous target is still dangerous.
+    let called = P::new(2)
+        .global("builtins", "getattr")
+        .global("ultralytics.nn.modules.head", "Detect")
+        .s("forward")
+        .op(&[0x86, b'R'])
+        .op(b")R")
+        .stop();
+    assert!(rules(&run(&called)).contains(&ids::PICKLE_NON_CONSTRUCTOR_CALL));
+    let to_os = P::new(2)
+        .global("builtins", "getattr")
+        .global("os", "path")
+        .s("os")
+        .op(&[0x86, b'R'])
+        .stop();
+    assert!(worst(&run(&to_os)) >= Severity::High);
+    // A computed attribute name, or a target that is not a plain global, is not resolved.
+    let computed = P::new(2)
+        .global("builtins", "getattr")
+        .global("collections", "OrderedDict")
+        .global("builtins", "str")
+        .op(b")R")
+        .op(&[0x86, b'R'])
+        .stop();
+    assert_eq!(worst(&run(&computed)), Severity::Critical);
+    // dill names builtin types through _load_type; only plain containers are resolved.
+    let dill_set = P::new(2)
+        .global("dill._dill", "_load_type")
+        .s("set")
+        .op(&[0x85, b'R'])
+        .op(b")R")
+        .stop();
+    let r = run(&dill_set);
+    assert!(r.findings.is_empty(), "{:?}", r.findings);
+    let dill_code = P::new(2)
+        .global("dill._dill", "_load_type")
+        .s("CodeType")
+        .op(&[0x85, b'R'])
+        .stop();
+    assert_eq!(worst(&run(&dill_code)), Severity::Critical);
+}

@@ -115,6 +115,9 @@ enum Lambda {
     Noisy(Vec<String>),
     /// It parsed and names none of those.
     Plain(Vec<String>),
+    /// The config names a function instead of storing one: the code is not in the file, and
+    /// Keras takes it from its own modules or from objects the caller supplies.
+    Named,
     /// No function was found, or it is not a code object this reader understands.
     Opaque,
 }
@@ -124,6 +127,12 @@ fn grade_lambda(cfg: Option<&Value>) -> Lambda {
     let function = cfg
         .and_then(|c| c.get("function"))
         .or_else(|| cfg.filter(|c| c.get("code").is_some()));
+    if let Some(Value::Object(m)) = function
+        && m.get("class_name").and_then(Value::as_str) == Some("function")
+        && m.get("config").is_some_and(Value::is_string)
+    {
+        return Lambda::Named;
+    }
     let (encoded, source) = match function {
         // Keras 2: [base64 bytecode, defaults, closure]
         Some(Value::Array(a)) => (a.first().and_then(Value::as_str), None),
@@ -290,6 +299,8 @@ pub fn check_configs(configs: &[Value], loc: &str) -> Vec<Finding> {
     }
     let mut out = Vec::new();
     let mut lambdas = w.lambdas;
+    // A Lambda that names a function carries no code; the custom-object finding covers it.
+    lambdas.retain(|(_, g)| *g != Lambda::Named);
     lambdas.sort_by(|a, b| a.0.cmp(&b.0));
     lambdas.dedup();
     if !lambdas.is_empty() {
@@ -481,6 +492,11 @@ pub(crate) mod tests {
                 assert!(f[0].message.contains(needle), "{}", f[0].message);
             }
         }
+        // A Lambda that names a function stores no code: only the custom-object note remains.
+        let named = r#"{"module": "keras.layers", "class_name": "Lambda", "config": {"name": "pre", "function": {"module": "builtins", "class_name": "function", "config": "preprocess_input", "registered_name": "function"}}}"#;
+        let f = check_config_json(named.as_bytes(), "x");
+        assert_eq!(f.len(), 1, "{f:?}");
+        assert!(f[0].rule == ids::KERAS_CUSTOM_OBJECT && f[0].message.contains("preprocess_input"));
         // Source text in place of bytecode, and a mix of readable and unreadable layers.
         let src = r#"{"class_name": "Lambda", "config": {"name": "s", "function": "lambda x: eval('1')"}}"#;
         let f = check_config_json(src.as_bytes(), "x");
