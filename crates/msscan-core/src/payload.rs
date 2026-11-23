@@ -129,15 +129,76 @@ const CODE_SINKS: &[&str] = &[
     "marshal.loads(base64.",
 ];
 
-/// The first command- or code-running call that appears in `text`.
+/// Whether the parentheses a sink leaves open are closed later in `rest`, reading Python string
+/// literals (single, double and triple quoted) as opaque when `quotes` is set.
+fn closes(rest: &[char], mut depth: i32, quotes: bool) -> bool {
+    let mut i = 0;
+    while i < rest.len() {
+        let c = rest[i];
+        if quotes && (c == '\'' || c == '"') {
+            let triple = rest.get(i + 1) == Some(&c) && rest.get(i + 2) == Some(&c);
+            let width = if triple { 3 } else { 1 };
+            i += width;
+            loop {
+                match rest.get(i) {
+                    None => return false,
+                    Some('\\') => i += 2,
+                    Some(&d) if d == c && (!triple || (rest.get(i + 1) == Some(&c) && rest.get(i + 2) == Some(&c))) => {
+                        i += width;
+                        break;
+                    }
+                    Some(_) => i += 1,
+                }
+            }
+            continue;
+        }
+        match c {
+            '(' => depth += 1,
+            ')' => {
+                depth -= 1;
+                if depth == 0 {
+                    return true;
+                }
+            }
+            _ => {}
+        }
+        i += 1;
+    }
+    false
+}
+
+/// The first command- or code-running call that appears in `text` as a complete call: the
+/// parenthesis it opens is closed again. A fragment such as `os.system("shutdown`, which is what
+/// one word of a tokenizer vocabulary built from source code looks like, is not a call.
 pub fn code_sink(text: &str) -> Option<&'static str> {
     // Spaces before the parenthesis or around the dot do not change what Python runs.
-    let squeezed: String = text.chars().filter(|c| !c.is_whitespace()).collect();
+    let squeezed: Vec<char> = text.chars().filter(|c| !c.is_whitespace()).collect();
     CODE_SINKS
         .iter()
         .find(|s| {
-            let key: String = s.chars().filter(|c| !c.is_whitespace()).collect();
-            squeezed.contains(&key)
+            let key: Vec<char> = s.chars().filter(|c| !c.is_whitespace()).collect();
+            let open =
+                key.iter().filter(|&&c| c == '(').count() as i32 - key.iter().filter(|&&c| c == ')').count() as i32;
+            let mut from = 0;
+            while let Some(at) = squeezed[from..].windows(key.len()).position(|w| w == key.as_slice()) {
+                let rest = &squeezed[from + at + key.len()..];
+                // A name prefix such as `os.execv` has no parenthesis of its own: the rest of
+                // the name and the call follow it.
+                let (rest, depth) = if key.contains(&'(') {
+                    (rest, open)
+                } else {
+                    let name = rest.iter().take_while(|c| c.is_alphanumeric() || **c == '_').count();
+                    match rest.get(name) {
+                        Some('(') => (&rest[name + 1..], 1),
+                        _ => (rest, -1),
+                    }
+                };
+                if depth == 0 || (depth > 0 && (closes(rest, depth, true) || closes(rest, depth, false))) {
+                    return true;
+                }
+                from += at + 1;
+            }
+            false
         })
         .copied()
 }
@@ -244,6 +305,17 @@ mod tests {
         assert_eq!(code_sink("x = __import__( 'os' ).getcwd()"), Some("__import__('os')"));
         assert!(code_sink("the operating system (os) runs subprocesses").is_none());
         assert!(code_sink("model.eval() and exec time").is_none());
+        // One word of a vocabulary built from source code is a fragment, not a call.
+        assert!(code_sink("os.system(\"shutdown").is_none());
+        assert!(code_sink("subprocess.run([\"ls\",").is_none());
+        assert!(code_sink("see os.execv and os.spawn in the manual").is_none());
+        assert_eq!(code_sink("os.execvp('sh', ['sh'])"), Some("os.execv"));
+        assert_eq!(code_sink("os.system('echo :) (')"), Some("os.system("));
+        assert_eq!(code_sink("os.system('''echo it's (''')"), Some("os.system("));
+        assert_eq!(
+            code_sink("lambda x: exec('import os; os.system(\"echo pwned\")')"),
+            Some("os.system(")
+        );
         assert_eq!(
             hidden_code(b"b3Muc3lzdGVtKCdlY2hvIEFUVEFDSycp"),
             Some(("os.system(", "base64"))

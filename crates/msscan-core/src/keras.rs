@@ -136,6 +136,10 @@ fn grade_lambda(cfg: Option<&Value>) -> Lambda {
     let (encoded, source) = match function {
         // Keras 2: [base64 bytecode, defaults, closure]
         Some(Value::Array(a)) => (a.first().and_then(Value::as_str), None),
+        // Keras 2 in SavedModel metadata: {"class_name": "__tuple__", "items": [base64, ...]}
+        Some(Value::Object(m)) if m.get("items").is_some_and(Value::is_array) => {
+            (m.get("items").and_then(|a| a.get(0)).and_then(Value::as_str), None)
+        }
         // Keras 3: {"class_name": "__lambda__", "config": {"code": base64, ...}}
         Some(Value::Object(m)) => (
             m.get("code")
@@ -511,6 +515,13 @@ pub(crate) mod tests {
             "{f:?}"
         );
         assert!(f[0].message.contains("1 could not be read"));
+        // The tuple wrapper that keras_metadata.pb puts around the Keras 2 list.
+        let wrapped = format!(
+            r#"{{"class_name": "Lambda", "config": {{"name": "p", "function": {{"class_name": "__tuple__", "items": ["{}", {{"class_name": "__tuple__", "items": [null]}}, null]}}}}}}"#,
+            sample("3.9", "math")
+        );
+        let f = check_config_json(wrapped.as_bytes(), "x");
+        assert!(f[0].severity == Severity::Medium, "{f:?}");
     }
 
     #[test]

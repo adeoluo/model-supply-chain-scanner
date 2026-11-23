@@ -288,6 +288,10 @@ struct Vm<'s, 'a> {
     marks: Vec<usize>,
     memo: HashMap<u64, u32>,
     root: Option<u32>,
+    /// Calls and BUILDs applied so far in this stream.
+    applied: u32,
+    /// For each EXT opcode: its finding index and `applied` when it ran.
+    ext_marks: Vec<(usize, u32)>,
 }
 
 const UNKNOWN: u32 = 0;
@@ -302,6 +306,8 @@ impl<'s, 'a> Vm<'s, 'a> {
             marks: Vec::new(),
             memo: HashMap::new(),
             root: None,
+            applied: 0,
+            ext_marks: Vec::new(),
         }
     }
 
@@ -549,6 +555,7 @@ impl<'s, 'a> Vm<'s, 'a> {
 
     /// Apply a call of `func` with `args` (a tuple node) at opcode offset `off`.
     fn call(&mut self, func: u32, args: u32, off: usize) -> u32 {
+        self.applied += 1;
         if let Node::Global(g) = self.nodes[func as usize] {
             let (m, n) = {
                 let imp = &self.sh.imports[g as usize];
@@ -667,6 +674,7 @@ impl<'s, 'a> Vm<'s, 'a> {
     }
 
     fn build(&mut self, target: u32, state: u32, off: usize) {
+        self.applied += 1;
         let dunder = |vm: &Self, d: u32| -> Vec<String> {
             match &vm.nodes[d as usize] {
                 Node::Dict(kv) => kv
@@ -1179,6 +1187,7 @@ impl<'s, 'a> Vm<'s, 'a> {
                         0x83 => self.u16()? as i64,
                         _ => self.i32()? as i64,
                     };
+                    self.ext_marks.push((self.sh.findings.len(), self.applied));
                     self.sh.findings.push(Finding::new(
                         ids::PICKLE_EXTENSION_REGISTRY,
                         format!("EXT opcode with code {code}"),
@@ -1385,15 +1394,31 @@ fn analyze_with(data: &[u8], loc: &str, limits: Limits, depth: u8) -> PickleRepo
     let mut extra = 0usize;
     loop {
         let start = pos;
-        let (res, end, root_magic) = {
+        let (res, end, root_magic, idle_ext) = {
             let mut vm = Vm::new(&mut sh, start);
             let r = vm.run();
             let magic = vm.root.is_some_and(|r| match vm.nodes[r as usize] {
                 Node::BigInt(s, e) => data[s..e] == TORCH_MAGIC,
                 _ => false,
             });
-            (r, vm.pos, magic)
+            let applied = vm.applied;
+            let idle: Vec<usize> = vm
+                .ext_marks
+                .iter()
+                .filter(|&&(_, at)| at == applied)
+                .map(|&(i, _)| i)
+                .collect();
+            (r, vm.pos, magic, idle)
         };
+        // A stream that breaks before anything is called or built after an EXT lookup never used
+        // what the lookup returned: this is what raw weights read as a pickle look like.
+        if matches!(res, Err(ref e) if !matches!(e, Stop::Limit(_))) {
+            for i in idle_ext {
+                let f = &mut sh.findings[i];
+                f.severity = Severity::Medium;
+                f.message.push_str("; the stream breaks before the result is used");
+            }
+        }
         match res {
             Ok(()) => {
                 pickles += 1;

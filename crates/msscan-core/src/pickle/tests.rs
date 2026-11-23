@@ -192,6 +192,29 @@ fn extension_registry() {
 }
 
 #[test]
+fn unused_extension_lookup_in_a_broken_stream_is_medium() {
+    // Raw half-precision weights that happen to start with the EXT4 byte.
+    let weights = [0x84, 0xad, 0x39, 0xaf, 0x77, 0xa7, 0x5f, 0xa4];
+    let r = run(&weights);
+    assert!(rules(&r).contains(&ids::PICKLE_EXTENSION_REGISTRY));
+    assert_eq!(worst(&r), Severity::Medium);
+    // The same lookup stays critical when it is called before the stream breaks.
+    let r = run(&[0x82, 7, b')', b'R', 0xa7]);
+    assert_eq!(worst(&r), Severity::Critical);
+    // A lookup that follows an earlier call and is never used itself is medium too.
+    let mut used_before = getcwd_reduce(2);
+    used_before.pop();
+    used_before.extend([0x82, 7, 0xa7]);
+    let r = run(&used_before);
+    let ext = r
+        .findings
+        .iter()
+        .find(|f| f.rule == ids::PICKLE_EXTENSION_REGISTRY)
+        .unwrap();
+    assert_eq!(ext.severity, Severity::Medium);
+}
+
+#[test]
 fn nested_pickle_loads_is_scanned() {
     let inner = getcwd_reduce(2);
     let data = P::new(3)
