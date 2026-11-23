@@ -17,6 +17,8 @@ dependencies = [
     "picklescan>=0.0.26",
     "modelscan>=0.8",
     "fickling>=0.1.3",
+    "modelaudit>=0.2.50",
+    "py7zr>=0.22",
     "keras>=3.6",
 ]
 

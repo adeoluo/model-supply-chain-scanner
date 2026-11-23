@@ -1063,6 +1063,314 @@ def gen_benign(c: Corpus) -> None:
     add("config.json", json.dumps(cfg).encode(), "hf-json", "config")
 
 
+# ---------------------------------------------------------------------------------------------
+# Second wave: call shapes, staged payloads, containers, configs and templates
+# ---------------------------------------------------------------------------------------------
+
+
+def _tar(members: dict[str, bytes]) -> bytes:
+    import tarfile
+
+    buf = io.BytesIO()
+    with tarfile.open(fileobj=buf, mode="w") as t:
+        for name, data in members.items():
+            info = tarfile.TarInfo(name)
+            info.size = len(data)
+            t.addfile(info, io.BytesIO(data))
+    return buf.getvalue()
+
+
+def _seven_zip(members: dict[str, bytes]) -> bytes:
+    import py7zr
+
+    buf = io.BytesIO()
+    with py7zr.SevenZipFile(buf, "w") as z:
+        for name, data in members.items():
+            z.writestr(data, name)
+    return buf.getvalue()
+
+
+def _lambda_config(fn: Callable[..., Any], name: str) -> dict[str, Any]:
+    """A Keras 3 model config holding one Lambda layer with ``fn`` as marshalled bytecode."""
+    import base64
+
+    code = base64.b64encode(marshal.dumps(fn.__code__)).decode()
+    return {
+        "module": "keras",
+        "class_name": "Sequential",
+        "config": {
+            "name": "s",
+            "layers": [
+                {
+                    "module": "keras.layers",
+                    "class_name": "Lambda",
+                    "config": {
+                        "name": name,
+                        "function": {
+                            "class_name": "__lambda__",
+                            "config": {"code": code, "defaults": None, "closure": None},
+                        },
+                    },
+                    "registered_name": None,
+                }
+            ],
+        },
+        "registered_name": None,
+    }
+
+
+def gen_second_wave(c: Corpus) -> None:
+    import base64
+    import dis
+    import pprint
+
+    import torch.jit.unsupported_tensor_ops as tensor_ops
+
+    def mal(rel: str, data: bytes, family: str, tech: str, loader: str, note: str) -> None:
+        c.add(
+            f"malicious/{family}/{rel}",
+            data,
+            label="malicious",
+            family=family,
+            technique=tech,
+            category="code-execution",
+            loader=loader,
+            note=note,
+        )
+
+    def ben(rel: str, data: bytes, family: str, tech: str) -> None:
+        c.add(
+            f"benign/{family}/{rel}",
+            data,
+            label="benign",
+            family=family,
+            technique=tech,
+            category="benign",
+            loader="",
+        )
+
+    # Calls that no denylist names, refused for their shape. Each runs its inert payload.
+    shapes: dict[str, tuple[Any, str]] = {
+        "stdlib-dis": (
+            Reduce(dis.dis, (say("stdlib-dis"),)),
+            "a standard-library function outside the reconstruction allowlist",
+        ),
+        "stdlib-pprint": (
+            Reduce(pprint.pprint, (f"{CANARY} stdlib-pprint",)),
+            "a standard-library function outside the reconstruction allowlist",
+        ),
+        "builtin-print": (Reduce(print, (f"{CANARY} builtin-print",)), "print called on load"),
+        "library-exec-wrapper": (
+            Reduce(tensor_ops.execWrapper, (say("library-exec-wrapper"), {}, {})),
+            "a library function that is neither a class nor a rebuild helper",
+        ),
+        "method-path": (
+            # The printer is built at load time: a live one holds sys.stdout and cannot pickle.
+            Reduce(
+                pprint.PrettyPrinter.pprint,
+                (Reduce(pprint.PrettyPrinter), f"{CANARY} method-path"),
+            ),
+            "a method reached through an attribute path",
+        ),
+    }
+    for tech, (obj, note) in shapes.items():
+        mal(f"{tech}.pkl", pickle.dumps(obj, protocol=4), "call-shape", tech, "pickle", note)
+
+    # Second-stage payloads kept as data. Loading the outer file does not run them.
+    stage = pickle.dumps(Reduce(print, (f"{CANARY} staged",)), protocol=4)
+    staged = {
+        "raw-bytes": {"weights": stage},
+        "base64-text": {"weights": base64.b64encode(stage).decode()},
+        "hex-text": {"weights": stage.hex()},
+        "two-stages": {"blob": pickle.dumps({"stage2": stage}, protocol=4)},
+    }
+    for tech, obj in staged.items():
+        mal(
+            f"{tech}.pkl",
+            pickle.dumps(obj, protocol=4),
+            "staged",
+            f"staged-pickle-{tech}",
+            "",
+            "a pickle stored as a constant; runs only if a second step unpickles it",
+        )
+    code = "import os; os.system('echo " + CANARY + "')"
+    mal(
+        "code-plain.pkl",
+        pickle.dumps({"postprocess": code}, protocol=4),
+        "staged",
+        "staged-code-plain",
+        "",
+        "code text stored as a constant",
+    )
+    mal(
+        "code-base64.pkl",
+        pickle.dumps({"postprocess": base64.b64encode(code.encode()).decode()}, protocol=4),
+        "staged",
+        "staged-code-base64",
+        "",
+        "base64 code text stored as a constant",
+    )
+    tensor = {"dtype": "F32", "shape": [2], "data_offsets": [0, 8]}
+    mal(
+        "metadata-code.safetensors",
+        st_bytes({"__metadata__": {"format": "pt", "init": code}, "w": tensor}, 8),
+        "staged",
+        "staged-code-safetensors-metadata",
+        "",
+        "code text in safetensors metadata",
+    )
+
+    # Containers that pickle scanners do not open.
+    payload = p_reduce_getcwd(4)
+    mal(
+        "weights.tar",
+        _tar({"model/data.pkl": payload}),
+        "container",
+        "tar-member",
+        "",
+        "pickle in a tar",
+    )
+    mal(
+        "weights.7z",
+        _seven_zip({"model/data.pkl": payload}),
+        "container",
+        "7z-member",
+        "",
+        "pickle in a 7z",
+    )
+    mal(
+        "model.nemo",
+        _tar(
+            {"model_config.yaml": b"preprocessor:\n  _target_: os.system\n  _args_: ['echo x']\n"}
+        ),
+        "container",
+        "tar-config-target",
+        "",
+        "a .nemo style archive whose config instantiates os.system",
+    )
+
+    # Configs and templates.
+    mal(
+        "hydra/config.yaml",
+        b"model:\n  _target_: torch.nn.Linear\n  in_features: 2\n  out_features: 2\n"
+        b'callbacks:\n  - _target_: builtins.eval\n    _args_: ["1+1"]\n',
+        "config",
+        "yaml-instantiate-target",
+        "",
+        "Hydra instantiate target that evaluates code",
+    )
+    mal(
+        "pyyaml/config.yaml",
+        b"model: !!python/object/apply:os.getcwd []\n",
+        "config",
+        "yaml-python-tag",
+        "",
+        "PyYAML object tag",
+    )
+    mal(
+        "json/config.json",
+        json.dumps({"model": {"_target_": "subprocess.check_output", "_args_": [["id"]]}}).encode(),
+        "config",
+        "json-instantiate-target",
+        "",
+        "instantiate target in a JSON config",
+    )
+    mal(
+        "chat_template.jinja",
+        (BENIGN_TAIL + SSTI["cycler-globals"]).encode(),
+        "config",
+        "template-file",
+        "",
+        "standalone chat template file",
+    )
+
+    # A Lambda whose bytecode reaches the system, next to one that is arithmetic.
+    mal(
+        "lambda-import.keras",
+        keras_zip(_lambda_config(lambda x: __import__("os").getcwd() and x, "risky")),
+        "keras",
+        "lambda-bytecode-import",
+        "",
+        "Lambda bytecode that imports os",
+    )
+    ben(
+        "lambda-math.keras",
+        keras_zip(_lambda_config(lambda x: x * 2.0 + 1.0, "scale")),
+        "keras",
+        "lambda-bytecode-arithmetic",
+    )
+
+    # Benign look-alikes for every check above.
+    import datetime
+    import enum
+    import pathlib
+    import re
+
+    class Color(enum.IntEnum):
+        RED = 1
+
+    benign_pickles: dict[str, Any] = {
+        "regex-path-date": {
+            "pattern": re.compile(r"\d+"),
+            "path": pathlib.PurePosixPath("weights/model.bin"),
+            "when": datetime.datetime(2026, 1, 1, tzinfo=datetime.UTC),
+        },
+        "base64-image": {"thumbnail": base64.b64encode(bytes(range(256)) * 4).decode()},
+        "hex-digest": {
+            "sha256": "ab" * 32,
+            "note": "weights checked with the operating system tools",
+        },
+        "nested-plain-pickle": {"cache": pickle.dumps({"k": [1, 2, 3]}, protocol=4)},
+        "prose-about-code": {
+            "readme": "Call model.eval() before inference. Do not exec untrusted code. "
+            "The subprocess module is not used by this model."
+        },
+    }
+    for tech, obj in benign_pickles.items():
+        ben(f"{tech}.pkl", pickle.dumps(obj, protocol=4), "look-alike", tech)
+    ben(
+        "weights.tar",
+        _tar({"model/data.pkl": pickle.dumps(OrderedDict(a=1), protocol=4)}),
+        "container",
+        "tar-member",
+    )
+    ben(
+        "weights.7z",
+        _seven_zip({"model/data.pkl": pickle.dumps(OrderedDict(a=1), protocol=4)}),
+        "container",
+        "7z-member",
+    )
+    ben(
+        "hydra/config.yaml",
+        b"model:\n  _target_: transformers.AutoModel.from_pretrained\n"
+        b"  pretrained_model_name_or_path: bert-base-uncased\n"
+        b"optimizer:\n  _target_: torch.optim.AdamW\n  lr: 0.001\n"
+        b"path:\n  _target_: os.path.join\n  _args_: [a, b]\n",
+        "config",
+        "yaml-instantiate-target",
+    )
+    ben("chat_template.jinja", TEMPLATES["chatml"].encode(), "config", "template-file")
+    ben(
+        "padded.safetensors",
+        st_bytes({"__metadata__": {"format": "pt", "tags": json.dumps({"a": 3})}, "w": tensor}, 8)
+        + b"\0" * 24,
+        "safetensors",
+        "trailing-padding",
+    )
+    ben(
+        "video.gguf",
+        gguf_bytes([], [("patch_embedding.weight", [1, 1, 2, 2, 2], 0, 0)], 32),
+        "gguf",
+        "five-dimensional-tensor",
+    )
+    ben(
+        "._model.safetensors",
+        bytes([0, 5, 0x16, 7, 0, 2, 0, 0]) + b"Mac OS X        " + b"\0" * 64,
+        "safetensors",
+        "macos-metadata-file",
+    )
+
+
 def main() -> None:
     ap = argparse.ArgumentParser(description=__doc__)
     ap.add_argument("--out", type=Path, required=True)
@@ -1078,6 +1386,7 @@ def main() -> None:
         gen_gguf,
         gen_safetensors,
         gen_hf_json,
+        gen_second_wave,
         gen_benign,
     ):
         gen(c)

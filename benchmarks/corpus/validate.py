@@ -84,7 +84,7 @@ elif kind == "safetensors":
 
 
 def run_one(corpus: Path, scratch: Path, item: dict[str, Any]) -> dict[str, Any]:
-    path = corpus / item["path"]
+    path = (corpus / item["path"]).resolve()
     t0 = time.perf_counter()
     try:
         p = subprocess.run(

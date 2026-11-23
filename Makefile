@@ -1,4 +1,4 @@
-.PHONY: help setup build develop fixtures lint format type test rust-test coverage all corpus validate compare hf-list hf-fetch hf-compare hf-status speed rules-doc diagram docker demo clean changelog cut-release
+.PHONY: help setup build develop fixtures lint format type test rust-test coverage all corpus validate compare third-party hf-list hf-fetch hf-compare hf-status speed rules-doc diagram docker demo clean changelog cut-release
 
 LLVM ?= /opt/homebrew/opt/llvm/bin
 DATA ?= ../.bench-data/model-supply-chain-scanner
@@ -56,6 +56,13 @@ validate: ## Load every corpus file with its real loader in a subprocess (benchm
 
 compare: ## msscan vs picklescan, modelscan and fickling on the synthetic corpus
 	$(BENCH) benchmarks/compare.py --corpus $(DATA)/synthetic --out benchmarks/results/synthetic
+
+third-party: ## Score every tool on test files written by other scanner projects (benchmarks/results/third_party.*)
+	mkdir -p $(DATA)/third_party
+	for r in mmaitre314/picklescan promptfoo/modelaudit protectai/modelscan trailofbits/fickling; do \
+		d=$(DATA)/third_party/$$(basename $$r); [ -d $$d ] || git clone -q --depth 1 https://github.com/$$r $$d; done
+	$(BENCH) benchmarks/third_party.py --src $(DATA)/third_party --out $(DATA)/third_party_corpus
+	$(BENCH) benchmarks/compare.py --corpus $(DATA)/third_party_corpus --out benchmarks/results/third_party
 
 hf-list: ## List Hugging Face Hub repositories and files (public endpoints, no token)
 	$(BENCH) benchmarks/hf/collect.py list --data $(DATA)/hf

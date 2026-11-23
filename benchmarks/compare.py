@@ -1,4 +1,4 @@
-"""Run msscan, picklescan, modelscan and fickling over a corpus and score them.
+"""Run msscan, picklescan, modelscan, fickling and ModelAudit over a corpus and score them.
 
 Each tool runs in its own subprocess (so one tool's import cost or crash cannot affect
 another) over the same file list, through its Python API with default settings:
@@ -7,6 +7,8 @@ another) over the same file list, through its Python API with default settings:
 - picklescan: flagged when ``infected_files > 0``; not scanned when it skips the file.
 - modelscan: flagged when it reports any issue; not scanned when it skips the file.
 - fickling: flagged when ``scan_file`` returns a severity above LIKELY_SAFE (``is_safe`` false).
+- ModelAudit: flagged when its exit code is 1 (a WARNING or CRITICAL issue); not scanned when
+  the exit code is 2 with no such issue (an error or an inconclusive scan).
 
 Usage: uv run --project benchmarks python benchmarks/compare.py --corpus DIR --out PREFIX
 """
@@ -23,7 +25,7 @@ from importlib import metadata
 from pathlib import Path
 from typing import Any
 
-TOOLS = ("msscan", "picklescan", "modelscan", "fickling")
+TOOLS = ("msscan", "picklescan", "modelscan", "fickling", "modelaudit")
 
 WORKER = r"""
 import json, sys, time, os, io, contextlib, logging
@@ -88,6 +90,19 @@ elif tool == "fickling":
         return {"flags": {"default": worst > Severity.LIKELY_SAFE,
                           "overtly": worst >= Severity.LIKELY_OVERTLY_MALICIOUS},
                 "scanned": True, "error": "; ".join(errors)[:300], "detail": [worst.name]}
+elif tool == "modelaudit":
+    os.environ["PROMPTFOO_DISABLE_TELEMETRY"] = "1"
+    os.environ["NO_ANALYTICS"] = "1"
+    from modelaudit.core import determine_exit_code, scan_model_directory_or_file
+    def scan(p):
+        r = scan_model_directory_or_file(p)
+        code = determine_exit_code(r)
+        sev = [str(getattr(i.severity, "value", i.severity)).lower() for i in r.issues]
+        noisy = [x for x in sev if x in ("warning", "critical")]
+        return {"flags": {"default": bool(noisy), "critical": "critical" in sev},
+                "scanned": code != 2 or bool(noisy), "error": "" if code != 2 or noisy else "exit code 2",
+                "detail": sorted({str(i.message)[:60] for i in r.issues
+                                  if str(getattr(i.severity, "value", i.severity)).lower() in ("warning", "critical")})[:6]}
 for p in paths:
     t0 = time.perf_counter()
     try:
@@ -189,6 +204,8 @@ def columns(results: dict[str, Any]) -> list[tuple[str, str, str]]:
         ("modelscan", "default"): "modelscan",
         ("fickling", "default"): "fickling",
         ("fickling", "overtly"): "fickling (overtly malicious)",
+        ("modelaudit", "default"): "ModelAudit",
+        ("modelaudit", "critical"): "ModelAudit (critical)",
     }
     return [(t, v, h) for (t, v), h in names.items() if t in results["tools"]]
 
@@ -209,7 +226,9 @@ def summarize(results: dict[str, Any]) -> str:
     ]
     groups: dict[tuple[str, str], list[int]] = defaultdict(list)
     for idx, it in enumerate(items):
-        if it["label"] == "malicious":
+        if "suite" in it:
+            groups[(it["label"], f"{it['suite']} suite")].append(idx)
+        elif it["label"] == "malicious":
             tier = "hard" if it["technique"].startswith("hard-") else it["category"]
             groups[("malicious", f"{it['family']} / {tier}")].append(idx)
         else:
