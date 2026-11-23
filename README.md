@@ -16,6 +16,30 @@
 
 > **Evidence level: publicly benchmarked, with limits.** Compared with picklescan, modelscan and fickling on a corpus written by the scanner's author, and run over 7,607 public Hugging Face files that have no ground-truth labels. Bypasses reported by outside reviewers are listed with their fixes below. Not independently reproduced and not used in production. [What the levels mean](https://github.com/adeoluo#evidence-levels).
 
+## In plain English
+
+AI model files can hide code that runs the moment you load them. This tool reads a model file
+**without loading it** and tells you whether it would run something dangerous.
+
+- **It caught every dangerous file in a real-world sample.** Out of 7,607 files from 2,888
+  public Hugging Face repositories, 17 would run a system command or `eval` when loaded. This
+  scanner flagged all 17. The three other scanners caught 5 to 7 of the 16 they could read.
+- **It catches three that Hugging Face's own scanners let through.** Hugging Face checks every
+  file with five scanners and flags 14 of those 17. The other three were marked safe or still
+  waiting on 2026-11-23: two ONNX files that reach outside their own folder, and a compressed
+  pickle that calls `eval`.
+- **It reads nine kinds of model file.** The other tools mostly read one (pickle). The files
+  they missed were mostly in formats they do not open, or were compressed.
+- **It is fast and small.** A 284 MB model takes 0.01 seconds and 4 MB of memory. On a 31 MB
+  pickle it takes 0.24 seconds where the others take 11, 12 and 103 seconds.
+- **It rarely cries wolf.** 31 false alarms in 7,563 clean files, which is 0.4%.
+
+**What it has not done:** found an attack nobody knew about. All 17 were already known: 13
+sit in repositories that say they are security tests, and Hugging Face already flags the
+other 4. Three outside reviewers also got files past it; every one of those gaps is fixed
+and [listed below](#bypasses-found-by-outside-reviewers).
+
+
 ## Motivation
 
 Loading a model is often running code. `torch.load` with `weights_only=False`, `pickle`,
@@ -147,6 +171,33 @@ zip-slip member and a decompression bomb that the headers-only collection did no
 Raw rows (pseudonymous ids, no repository names):
 [`hf_corpus.json`](benchmarks/results/hf_corpus.json), labels and tables:
 [`hf_review.md`](benchmarks/results/hf_review.md).
+
+### Were the 17 payload files already known?
+
+Yes, all of them. [`benchmarks/hf/hub_status.py`](benchmarks/hf/hub_status.py) asks the Hub's
+public API what its own scanners (Protect AI Guardian, JFrog, picklescan, ClamAV and
+VirusTotal) say about each payload file, and whether the repository presents itself as
+security test material. Checked on 2026-11-23 (`make hf-status`, raw rows with pseudonymous
+ids in [`hf_hub_status.json`](benchmarks/results/hf_hub_status.json)):
+
+| | Files |
+|---|---:|
+| Payload files, in 6 repositories | 17 |
+| Flagged by the Hub (10 unsafe, 4 suspicious) | 14 |
+| Not flagged by the Hub (2 safe, 1 with a scan still queued) | 3 |
+| In repositories that present themselves as security tests | 13 |
+| Neither flagged by the Hub nor in a declared test repository | **0** |
+
+So msscan found nothing new here, and nothing in this corpus should be called a discovery.
+What the check does show is coverage: the three files the Hub does not flag are two ONNX
+models whose external-data path leaves the model directory (`MS701`), marked safe, and a
+compressed pickle that calls `builtins.eval`, which four of the Hub's five scanners had
+marked safe while the fifth was still queued. All three are in repositories that declare
+themselves scanner tests, so they are known bypass cases that msscan happens to cover.
+
+Limits of this check: files were matched by path on today's `main`, not by hash, so a file
+may have changed since the corpus was collected; the statuses are a snapshot and queued scans
+may finish; and no search was made of advisories or bug-bounty reports for these files.
 
 ### Speed and memory
 

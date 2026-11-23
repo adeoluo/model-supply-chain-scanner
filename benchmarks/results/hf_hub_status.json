@@ -1,0 +1,345 @@
+{
+ "summary": {
+  "checked_on": "2026-11-23",
+  "payload_files": 17,
+  "repositories": 6,
+  "hub_status": {
+   "suspicious": 4,
+   "unsafe": 10,
+   "safe": 2,
+   "queued": 1
+  },
+  "flagged_by_the_hub": 14,
+  "not_flagged_by_the_hub": 3,
+  "in_repositories_presenting_as_security_tests": 13,
+  "neither_flagged_nor_a_declared_test": 0,
+  "note": "A discovery would be a payload file that the Hub does not flag and that is not in a repository presenting itself as a security test. Statuses are a snapshot of the main branch on the day of the check; files were matched by path, not by hash, and queued scans may finish later."
+ },
+ "rows": [
+  {
+   "id": "f41384d06cacc",
+   "repository": 1,
+   "basis": "MS502",
+   "msscan": "high",
+   "hub_status": "suspicious",
+   "hub_scanners": {
+    "protectAiScan": "suspicious",
+    "jFrogScan": "safe",
+    "pickleImportScan": "unscanned",
+    "avScan": "safe",
+    "virusTotalScan": "unscanned"
+   },
+   "hub_flags_it": true,
+   "presents_as_security_test": true,
+   "presents_as_security_test_by": [
+    "by_name",
+    "by_model_card"
+   ]
+  },
+  {
+   "id": "fca89cccb8b4b",
+   "repository": 1,
+   "basis": "nt.system",
+   "msscan": "high",
+   "hub_status": "unsafe",
+   "hub_scanners": {
+    "protectAiScan": "unsafe",
+    "jFrogScan": "unsafe",
+    "pickleImportScan": "unsafe",
+    "avScan": "suspicious",
+    "virusTotalScan": "safe"
+   },
+   "hub_flags_it": true,
+   "presents_as_security_test": true,
+   "presents_as_security_test_by": [
+    "by_name",
+    "by_model_card"
+   ]
+  },
+  {
+   "id": "f3dc35c2b5261",
+   "repository": 1,
+   "basis": "MS502",
+   "msscan": "high",
+   "hub_status": "suspicious",
+   "hub_scanners": {
+    "protectAiScan": "suspicious",
+    "jFrogScan": "safe",
+    "pickleImportScan": "unscanned",
+    "avScan": "safe",
+    "virusTotalScan": "unscanned"
+   },
+   "hub_flags_it": true,
+   "presents_as_security_test": true,
+   "presents_as_security_test_by": [
+    "by_name",
+    "by_model_card"
+   ]
+  },
+  {
+   "id": "f5f832a118870",
+   "repository": 2,
+   "basis": "posix.system",
+   "msscan": "high",
+   "hub_status": "unsafe",
+   "hub_scanners": {
+    "protectAiScan": "unsafe",
+    "jFrogScan": "unsafe",
+    "pickleImportScan": "unsafe",
+    "avScan": "suspicious",
+    "virusTotalScan": "safe"
+   },
+   "hub_flags_it": true,
+   "presents_as_security_test": true,
+   "presents_as_security_test_by": [
+    "by_name",
+    "by_model_card"
+   ]
+  },
+  {
+   "id": "fb127062f3ec5",
+   "repository": 2,
+   "basis": "MS801",
+   "msscan": "high",
+   "hub_status": "unsafe",
+   "hub_scanners": {
+    "protectAiScan": "unsafe",
+    "jFrogScan": "unsafe",
+    "pickleImportScan": "unscanned",
+    "avScan": "safe",
+    "virusTotalScan": "unscanned"
+   },
+   "hub_flags_it": true,
+   "presents_as_security_test": true,
+   "presents_as_security_test_by": [
+    "by_name",
+    "by_model_card"
+   ]
+  },
+  {
+   "id": "f154f19b409c8",
+   "repository": 2,
+   "basis": "nt.system",
+   "msscan": "high",
+   "hub_status": "unsafe",
+   "hub_scanners": {
+    "protectAiScan": "unsafe",
+    "jFrogScan": "unsafe",
+    "pickleImportScan": "unsafe",
+    "avScan": "suspicious",
+    "virusTotalScan": "suspicious"
+   },
+   "hub_flags_it": true,
+   "presents_as_security_test": true,
+   "presents_as_security_test_by": [
+    "by_name",
+    "by_model_card"
+   ]
+  },
+  {
+   "id": "f00a06a18ea19",
+   "repository": 3,
+   "basis": "sys.exit",
+   "msscan": "high",
+   "hub_status": "unsafe",
+   "hub_scanners": {
+    "protectAiScan": "unsafe",
+    "jFrogScan": "unsafe",
+    "pickleImportScan": "unsafe",
+    "avScan": "suspicious",
+    "virusTotalScan": "safe"
+   },
+   "hub_flags_it": true,
+   "presents_as_security_test": true,
+   "presents_as_security_test_by": [
+    "by_name"
+   ]
+  },
+  {
+   "id": "fb5a7813b3e1b",
+   "repository": 3,
+   "basis": "requests.get",
+   "msscan": "high",
+   "hub_status": "unsafe",
+   "hub_scanners": {
+    "protectAiScan": "unsafe",
+    "jFrogScan": "unsafe",
+    "pickleImportScan": "unsafe",
+    "avScan": "suspicious",
+    "virusTotalScan": "safe"
+   },
+   "hub_flags_it": true,
+   "presents_as_security_test": true,
+   "presents_as_security_test_by": [
+    "by_name"
+   ]
+  },
+  {
+   "id": "f519a957186a2",
+   "repository": 3,
+   "basis": "MS701",
+   "msscan": "high",
+   "hub_status": "safe",
+   "hub_scanners": {
+    "protectAiScan": "safe",
+    "jFrogScan": "unscanned",
+    "pickleImportScan": "unscanned",
+    "avScan": "safe",
+    "virusTotalScan": "unscanned"
+   },
+   "hub_flags_it": false,
+   "presents_as_security_test": true,
+   "presents_as_security_test_by": [
+    "by_name"
+   ]
+  },
+  {
+   "id": "fe3cd4b1bf050",
+   "repository": 4,
+   "basis": "posix.system",
+   "msscan": "high",
+   "hub_status": "unsafe",
+   "hub_scanners": {
+    "protectAiScan": "unsafe",
+    "jFrogScan": "queued",
+    "pickleImportScan": "unscanned",
+    "avScan": "unscanned",
+    "virusTotalScan": "safe"
+   },
+   "hub_flags_it": true,
+   "presents_as_security_test": false,
+   "presents_as_security_test_by": []
+  },
+  {
+   "id": "f599688e1e25f",
+   "repository": 4,
+   "basis": "posix.system",
+   "msscan": "high",
+   "hub_status": "unsafe",
+   "hub_scanners": {
+    "protectAiScan": "unsafe",
+    "jFrogScan": "queued",
+    "pickleImportScan": "unscanned",
+    "avScan": "unscanned",
+    "virusTotalScan": "safe"
+   },
+   "hub_flags_it": true,
+   "presents_as_security_test": false,
+   "presents_as_security_test_by": []
+  },
+  {
+   "id": "f3a9b55a7f9b4",
+   "repository": 5,
+   "basis": "MS502",
+   "msscan": "high",
+   "hub_status": "suspicious",
+   "hub_scanners": {
+    "protectAiScan": "suspicious",
+    "jFrogScan": "safe",
+    "pickleImportScan": "unscanned",
+    "avScan": "safe",
+    "virusTotalScan": "safe"
+   },
+   "hub_flags_it": true,
+   "presents_as_security_test": false,
+   "presents_as_security_test_by": []
+  },
+  {
+   "id": "fceb1f4adb0ee",
+   "repository": 5,
+   "basis": "MS502",
+   "msscan": "high",
+   "hub_status": "suspicious",
+   "hub_scanners": {
+    "protectAiScan": "suspicious",
+    "jFrogScan": "safe",
+    "pickleImportScan": "unscanned",
+    "avScan": "safe",
+    "virusTotalScan": "safe"
+   },
+   "hub_flags_it": true,
+   "presents_as_security_test": false,
+   "presents_as_security_test_by": []
+  },
+  {
+   "id": "fb515c204d5d6",
+   "repository": 6,
+   "basis": "MS701",
+   "msscan": "high",
+   "hub_status": "safe",
+   "hub_scanners": {
+    "protectAiScan": "unscanned",
+    "jFrogScan": "unscanned",
+    "pickleImportScan": "unscanned",
+    "avScan": "safe",
+    "virusTotalScan": "safe"
+   },
+   "hub_flags_it": false,
+   "presents_as_security_test": true,
+   "presents_as_security_test_by": [
+    "by_name",
+    "by_model_card"
+   ]
+  },
+  {
+   "id": "f8aca5ca6e15e",
+   "repository": 6,
+   "basis": "builtins.eval",
+   "msscan": "high",
+   "hub_status": "queued",
+   "hub_scanners": {
+    "protectAiScan": "safe",
+    "jFrogScan": "queued",
+    "pickleImportScan": "safe",
+    "avScan": "safe",
+    "virusTotalScan": "safe"
+   },
+   "hub_flags_it": false,
+   "presents_as_security_test": true,
+   "presents_as_security_test_by": [
+    "by_name",
+    "by_model_card"
+   ]
+  },
+  {
+   "id": "fa9221933852a",
+   "repository": 6,
+   "basis": "builtins.eval",
+   "msscan": "high",
+   "hub_status": "unsafe",
+   "hub_scanners": {
+    "protectAiScan": "unsafe",
+    "jFrogScan": "queued",
+    "pickleImportScan": "safe",
+    "avScan": "safe",
+    "virusTotalScan": "safe"
+   },
+   "hub_flags_it": true,
+   "presents_as_security_test": true,
+   "presents_as_security_test_by": [
+    "by_name",
+    "by_model_card"
+   ]
+  },
+  {
+   "id": "fa1ed71ab6c31",
+   "repository": 6,
+   "basis": "builtins.eval",
+   "msscan": "high",
+   "hub_status": "unsafe",
+   "hub_scanners": {
+    "protectAiScan": "unsafe",
+    "jFrogScan": "queued",
+    "pickleImportScan": "safe",
+    "avScan": "safe",
+    "virusTotalScan": "safe"
+   },
+   "hub_flags_it": true,
+   "presents_as_security_test": true,
+   "presents_as_security_test_by": [
+    "by_name",
+    "by_model_card"
+   ]
+  }
+ ]
+}

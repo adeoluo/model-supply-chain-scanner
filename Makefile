@@ -1,4 +1,4 @@
-.PHONY: help setup build develop fixtures lint format type test rust-test coverage all corpus validate compare hf-list hf-fetch hf-compare speed rules-doc diagram docker demo clean changelog cut-release
+.PHONY: help setup build develop fixtures lint format type test rust-test coverage all corpus validate compare hf-list hf-fetch hf-compare hf-status speed rules-doc diagram docker demo clean changelog cut-release
 
 LLVM ?= /opt/homebrew/opt/llvm/bin
 DATA ?= ../.bench-data/model-supply-chain-scanner
@@ -68,6 +68,9 @@ hf-compare: ## Scan the Hub corpus with all four tools (benchmarks/results/hf_co
 
 hf-review: ## Label flagged Hub files and tabulate flag rates (benchmarks/results/hf_review.*)
 	$(BENCH) benchmarks/hf/review.py --data $(DATA)/hf --out benchmarks/results/hf_review
+
+hf-status: ## Ask the Hub what its own scanners say about the payload files (benchmarks/results/hf_hub_status.json)
+	$(BENCH) benchmarks/hf/hub_status.py --data $(DATA)/hf --out benchmarks/results/hf_hub_status
 
 speed: build ## Wall time and peak memory on large real checkpoints (benchmarks/results/speed.json)
 	$(BENCH) benchmarks/speed.py --data $(DATA)/speed --msscan target/release/msscan
