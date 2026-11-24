@@ -542,7 +542,7 @@ dependencies = [
 
 [[package]]
 name = "msscan"
-version = "0.1.1"
+version = "0.2.0"
 dependencies = [
  "clap",
  "msscan-core",
@@ -551,7 +551,7 @@ dependencies = [
 
 [[package]]
 name = "msscan-core"
-version = "0.1.1"
+version = "0.2.0"
 dependencies = [
  "bzip2",
  "flate2",
@@ -569,7 +569,7 @@ dependencies = [
 
 [[package]]
 name = "msscan-py"
-version = "0.1.1"
+version = "0.2.0"
 dependencies = [
  "msscan-core",
  "pyo3",

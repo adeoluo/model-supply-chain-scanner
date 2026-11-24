@@ -1,4 +1,4 @@
-Versions: msscan 0.1.1 picklescan 1.0.5 modelscan 0.8.8 fickling 0.1.13 modelaudit 0.2.58
+Versions: msscan 0.2.0 picklescan 1.0.5 modelscan 0.8.8 fickling 0.1.13 modelaudit 0.2.58
 
 | Group | Files | msscan (high) | msscan (medium) | picklescan | picklescan --strict | modelscan | fickling | fickling (overtly malicious) | ModelAudit | ModelAudit (critical) |
 |---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|
@@ -14,4 +14,4 @@ Versions: msscan 0.1.1 picklescan 1.0.5 modelscan 0.8.8 fickling 0.1.13 modelaud
 | False positive rate (benign) | 37 | 0/37 = 0.000 (0.000 to 0.094) | 7/37 = 0.189 (0.095 to 0.342) | 0/37 = 0.000 (0.000 to 0.094) | 2/37 = 0.054 (0.015 to 0.177) | 0/37 = 0.000 (0.000 to 0.094) | 6/37 = 0.162 (0.077 to 0.311) | 0/37 = 0.000 (0.000 to 0.094) | 4/37 = 0.108 (0.043 to 0.247) | 1/37 = 0.027 (0.005 to 0.138) |
 
 | Files not scanned or with errors | | 0 | 0 | 6 | 6 | 57 | 51 | 51 | 7 | 7 |
-| Wall time (s, one process, includes imports) | | 0.1 | 0.1 | 0.3 | 0.3 | 0.2 | 2.1 | 2.1 | 73.5 | 73.5 |
+| Wall time (s, one process, includes imports) | | 0.1 | 0.1 | 0.3 | 0.3 | 0.3 | 2.1 | 2.1 | 76.2 | 76.2 |
