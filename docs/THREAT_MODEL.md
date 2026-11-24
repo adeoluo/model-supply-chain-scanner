@@ -2,8 +2,8 @@
 
 ## What the scanner defends
 
-A user who downloads a model file (a PyTorch checkpoint, a joblib model, a Keras model, a GGUF
-file, an ONNX graph) and is about to load it. Loading a pickle-based file runs code chosen by
+A user who downloads a model file or a model repository (a PyTorch checkpoint, a joblib
+model, a Keras model, a GGUF file, an ONNX graph, with its configs) and is about to load it. Loading a pickle-based file runs code chosen by
 whoever wrote it; other formats can reach files, call Python from a graph, inject into a chat
 template renderer, or crash a native parser. `msscan` reads the file without loading it and
 reports what loading it would do.
@@ -28,16 +28,22 @@ reports what loading it would do.
 
 | Threat | Vector | Impact | Mitigation in msscan |
 |---|---|---|---|
-| Code execution on load | `REDUCE`, `INST`, `OBJ`, `NEWOBJ` of dangerous globals | Full compromise | Symbolic VM, denylist of 161 modules and 145 names, plus 76 loader-style names refused inside library namespaces (MS101) |
+| Code execution on load | `REDUCE`, `INST`, `OBJ`, `NEWOBJ` of dangerous globals | Full compromise | Symbolic VM, denylist of 183 modules and 145 names, plus 76 loader-style names refused inside library namespaces (MS101) |
+| Code execution through a function no list names | A call of a standard-library function, a method through an attribute path, or a library function that is not a class or a rebuild helper | Full compromise | Refused by shape (MS115, ADR 0007) |
 | Evasion by computed imports | `STACK_GLOBAL` fed by `_codecs.encode(..., "rot13")` or memo tricks | Bypasses import lists | Operands tracked through memo and calls (MS103) |
 | Evasion by attribute writes | `BUILD` sets `__setstate__`, or patches an imported class | Code execution or tampering | Dunder and global-target `BUILD` detection (MS105) |
 | Evasion by indirection | `functools.partial(os.getcwd)()`, `getattr(__import__("os"), ...)()` | Bypasses callee checks | Globals in call arguments count as called; calls of call results (MS110) |
 | Nested payloads | `pickle.loads(b"...")`, `torch.storage._load_from_bytes` | Hidden second stage | Embedded bytes scanned recursively (MS106) |
+| Staged payloads | A pickle or code-running call stored as a string constant or in safetensors metadata, plain, base64 or hex, for a later step to decode | Hidden second stage | Constants decoded and parsed without running them (MS116, MS117) |
+| Stored functions | `functools.partial(f, ...)` or `operator.methodcaller(...)` kept in a pipeline for a later call | Code runs when the model is used, not when it is loaded | Critical when the target is dangerous or the result is called on load; otherwise medium (MS118) |
 | Parser differentials | Zip local header name or encryption flag differs from the central directory | Scanner and loader see different files | Both headers read and compared; plaintext "encrypted" members still scanned (MS202, MS205) |
 | Hiding behind data | joblib raw array bytes before the payload; legacy PyTorch storages | Linear opcode walkers stop early | Exact array skipping; legacy streams read as five pickles |
-| Wrapper formats | gzip, zlib, bz2, xz, lzma, lz4 around pickles; `.npz`; misleading extensions | Formats not unpacked | Content sniffing, bounded decompression (MS203), extension mismatch (MS1001) |
+| Wrapper formats | gzip, zlib, bz2, xz, lzma, lz4 around pickles; `.npz`; 7z and tar archives; misleading extensions | Formats not unpacked | Content sniffing, bounded decompression (MS203), extension mismatch (MS1001); RAR is reported as not scanned (MS204) |
 | Decompression bombs | Huge inflated sizes | Scanner memory exhaustion | Per-member and per-stream limits (default 1 GiB) |
-| Keras code | Lambda layers, system and third-party modules in configs, `TFOpLambda` file ops | Code execution, file writes | Config walk (MS501, MS502, MS505) |
+| Keras code | Lambda layers, system and third-party modules in configs, `TFOpLambda` file ops | Code execution, file writes | Config walk (MS502, MS505); Lambda bytecode read without running it and graded by the names it carries (MS501) |
+| Files read through a config | A Keras layer config value that is a path on the loading machine (vocabulary and tokenizer files); a checkpoint index naming a shard outside the model directory | The model reads a file its author chose | MS506, MS1004 |
+| Links out of the repository | A symbolic link in a model directory, or a link stored as a file, pointing to a system path | A loader or server opens the link target | Reported and not opened (MS206) |
+| Unsafe configs | PyYAML `!!python/object` tags, Hydra `_target_` naming a command or code runner | Code execution when the config is loaded or instantiated | MS1101, MS1102 |
 | Graph side effects | `ReadFile`, `WriteFile`, `PyFunc` in SavedModel graphs | File access, Python calls | Protobuf op scan (MS601, MS602) |
 | Path traversal | ONNX external data `../..` or absolute paths; zip entry names | Reading or writing outside the model directory | MS701, MS201 |
 | Template injection | GGUF or tokenizer chat templates reaching `__globals__` | Code execution in unsandboxed renderers | Tag-level checks (MS801, MS802) |
@@ -54,12 +60,12 @@ model file and the code that loads it.
 
 | Threat | OWASP LLM 2026 | MITRE ATLAS v2026.10 | Rules |
 |---|---|---|---|
-| Code execution on load | LLM04:2026 Supply Chain | AML.T0011.000 User Execution: Unsafe AI Artifacts; AML.T0018.002 Manipulate AI Model: Embed Malware; AML.T0010.003 Supply Chain Compromise: Model Repository; AML.T0115.001 Publish Poisoned AI Artifacts: Models | MS101 |
-| Evasion by computed imports, attribute writes, indirection, nested payloads, wrappers and hiding behind data | LLM04:2026 Supply Chain | AML.T0123 Obfuscated Files or Information; AML.T0018.002 Manipulate AI Model: Embed Malware | MS103, MS105, MS106, MS110, MS203, MS1001 |
+| Code execution on load | LLM04:2026 Supply Chain | AML.T0011.000 User Execution: Unsafe AI Artifacts; AML.T0018.002 Manipulate AI Model: Embed Malware; AML.T0010.003 Supply Chain Compromise: Model Repository; AML.T0115.001 Publish Poisoned AI Artifacts: Models | MS101, MS115, MS118, MS1101, MS1102 |
+| Evasion by computed imports, attribute writes, indirection, nested payloads, wrappers and hiding behind data | LLM04:2026 Supply Chain | AML.T0123 Obfuscated Files or Information; AML.T0018.002 Manipulate AI Model: Embed Malware | MS103, MS105, MS106, MS110, MS116, MS117, MS203, MS1001 |
 | Truncated or damaged pickles that run a payload before failing | LLM04:2026 Supply Chain | AML.T0076 Corrupt AI Model | MS109 |
 | Parser differentials | LLM04:2026 Supply Chain | AML.T0107 Exploitation for Defense Evasion | MS202, MS205 |
 | Keras code and graph side effects | LLM04:2026 Supply Chain | AML.T0011.000 User Execution: Unsafe AI Artifacts; AML.T0018.002 Manipulate AI Model: Embed Malware | MS501, MS502, MS505, MS601, MS602 |
-| Path traversal | LLM04:2026 Supply Chain | AML.T0011.000 User Execution: Unsafe AI Artifacts | MS201, MS701 |
+| Path traversal, files read through a config, links out of the repository | LLM04:2026 Supply Chain | AML.T0011.000 User Execution: Unsafe AI Artifacts | MS201, MS206, MS506, MS701, MS1004 |
 | Template injection | LLM04:2026 Supply Chain; LLM01:2026 Prompt Injection | AML.T0018.003 Manipulate AI Model: Modify Prompt Construction Logic | MS801, MS802 |
 | Native parser bugs | LLM04:2026 Supply Chain | AML.T0011.000 User Execution: Unsafe AI Artifacts | MS803, MS901, MS902 |
 | Decompression bombs and scanner denial of service | | AML.T0119 Exploit Automated Artifact Processing Pipeline | MS203, MS114 |
@@ -72,12 +78,17 @@ and Value Chain and Component Integration risks.
 
 ## Residual risk
 
-- Functions outside the denylist that run code are reported only as unknown or library calls
-  (medium or low), below the default failure threshold. Outside reviewers found several such
-  functions inside trusted library namespaces (`torch.utils.collect_env.run`, a pickled Keras
-  `Lambda`, `transformers.dynamic_module_utils`); they and the loader-style names around them
-  are now refused, but a code-running library function that is neither cataloged nor named
-  like a loader still passes.
+- Outside reviewers found code-running functions inside trusted library namespaces
+  (`torch.utils.collect_env.run`, a pickled Keras `Lambda`,
+  `transformers.dynamic_module_utils`). Since 0.2.0 a called function is refused by its shape
+  without being listed, but classes are still trusted: a class in a trusted library whose
+  constructor runs code, and that is not cataloged, passes as library code. A function from
+  an unknown third-party package is medium, below the default failure threshold.
+- A function stored for later (MS118) is medium. If the pipeline calls it when the model is
+  used and it runs code, the scan did not fail.
+- Staged payloads are found by known shapes (a nested pickle, a fixed list of code-running
+  calls, in plain text, base64 or hex). Other encodings are not decoded.
+- Links that leave the scanned directory are not followed, so their targets are not scanned.
 - TorchScript code, TFLite, Core ML, MLflow, TensorRT and other formats are not analyzed.
 - A model can be harmful without code: poisoned or backdoored weights are out of scope.
 - `weights_only=True` loading in PyTorch 2.6 and later already blocks most pickle payloads;

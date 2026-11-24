@@ -48,13 +48,13 @@ all: lint type coverage ## Full local gate (mirror of continuous integration)
 
 BENCH = uv run --project benchmarks python
 
-corpus: ## Generate the inert synthetic corpus (malicious techniques and benign files)
+corpus: ## Generate the inert authored corpus (malicious techniques and benign files)
 	rm -rf $(DATA)/synthetic && $(BENCH) benchmarks/corpus/generate.py --out $(DATA)/synthetic
 
 validate: ## Load every corpus file with its real loader in a subprocess (benchmarks/results/validation.json)
 	$(BENCH) benchmarks/corpus/validate.py --corpus $(DATA)/synthetic --out benchmarks/results/validation.json
 
-compare: ## msscan vs picklescan, modelscan and fickling on the synthetic corpus
+compare: ## msscan vs picklescan, modelscan, fickling and ModelAudit on the authored corpus
 	$(BENCH) benchmarks/compare.py --corpus $(DATA)/synthetic --out benchmarks/results/synthetic
 
 third-party: ## Score every tool on test files written by other scanner projects (benchmarks/results/third_party.*)
@@ -83,7 +83,7 @@ hf-heldout: ## Draw, fetch, scan and cross-check a second Hub sample of the newe
 	$(BENCH) benchmarks/hf/review.py --data $(DATA)/hf_heldout --corpus benchmarks/results/hf_heldout.json --out benchmarks/results/hf_heldout_review
 	$(BENCH) benchmarks/hf/hub_status.py --data $(DATA)/hf_heldout --review benchmarks/results/hf_heldout_review.json --corpus benchmarks/results/hf_heldout.json --out benchmarks/results/hf_heldout_hub_status
 
-hf-status: ## Ask the Hub what its own scanners say about the payload files (benchmarks/results/hf_hub_status.json)
+hf-status: ## Ask the Hub what its own scanners say about the files msscan rates high (benchmarks/results/hf_hub_status.json)
 	$(BENCH) benchmarks/hf/hub_status.py --data $(DATA)/hf --out benchmarks/results/hf_hub_status
 
 speed: build ## Wall time and peak memory on large real checkpoints (benchmarks/results/speed.json)

@@ -21,6 +21,8 @@ Languages: Python, Rust. License: MIT. Source: https://github.com/adeoluo/model-
 - [ADR-0004: Severities, verdicts and a noisy-or risk score](https://github.com/adeoluo/model-supply-chain-scanner/blob/main/docs/adr/0004-risk-scoring-and-verdicts.md)
 - [ADR-0005: Reading Keras configs from raw bytes instead of parsing HDF5](https://github.com/adeoluo/model-supply-chain-scanner/blob/main/docs/adr/0005-configs-from-raw-bytes.md)
 - [ADR-0006: A Hub corpus from headers and stubs, published without names](https://github.com/adeoluo/model-supply-chain-scanner/blob/main/docs/adr/0006-hub-corpus-headers-only.md)
+- [ADR-0007: Refuse pickle calls by their shape, not only by name](https://github.com/adeoluo/model-supply-chain-scanner/blob/main/docs/adr/0007-refuse-calls-by-shape.md)
+- [ADR-0008: Measure on a sample the rules never saw, then record what it changed](https://github.com/adeoluo/model-supply-chain-scanner/blob/main/docs/adr/0008-held-out-sample-and-what-it-changed.md)
 - [ADR-NNNN: <short title>](https://github.com/adeoluo/model-supply-chain-scanner/blob/main/docs/adr/template.md)
 - [Changelog](https://github.com/adeoluo/model-supply-chain-scanner/blob/main/CHANGELOG.md): release history
 

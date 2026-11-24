@@ -40,16 +40,19 @@ Key modules:
 | `make test` | All tests |
 | `make coverage` | Tests with the coverage gates used in CI (Rust 85% lines, Python 80%) |
 | `make all` | Full local gate (mirror of continuous integration) |
-| `make corpus` | Generate the inert synthetic corpus (malicious techniques and benign files) |
+| `make corpus` | Generate the inert authored corpus (malicious techniques and benign files) |
 | `make validate` | Load every corpus file with its real loader in a subprocess (benchmarks/results/validation.json) |
-| `make compare` | msscan vs picklescan, modelscan and fickling on the synthetic corpus |
+| `make compare` | msscan vs picklescan, modelscan, fickling and ModelAudit on the authored corpus |
+| `make third-party` | Score every tool on test files written by other scanner projects (benchmarks/results/third_party.*) |
 | `make hf-list` | List Hugging Face Hub repositories and files (public endpoints, no token) |
 | `make hf-fetch` | Fetch headers and small files from the Hub (resumable, 2.5 GB budget) |
-| `make hf-compare` | Scan the Hub corpus with all four tools (benchmarks/results/hf_corpus.json) |
+| `make hf-compare` | Scan the Hub corpus with all five tools (benchmarks/results/hf_corpus.json) |
 | `make hf-review` | Label flagged Hub files and tabulate flag rates (benchmarks/results/hf_review.*) |
+| `make hf-heldout` | Draw, fetch, scan and cross-check a second Hub sample of the newest repositories (never tuned on) |
+| `make hf-status` | Ask the Hub what its own scanners say about the files msscan rates high (benchmarks/results/hf_hub_status.json) |
 | `make speed` | Wall time and peak memory on large real checkpoints (benchmarks/results/speed.json) |
 | `make rules-doc` | Regenerate docs/RULES.md |
-| `make diagram` | Render the architecture diagram |
+| `make diagram` | Render every diagram in docs/architecture to SVG (house theme, white background) |
 | `make docker` | Build the container image |
 | `make demo` | Record the demo GIFs with vhs |
 | `make clean` | Remove build artifacts |
