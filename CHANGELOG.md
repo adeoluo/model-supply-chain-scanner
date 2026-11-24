@@ -4,6 +4,41 @@ All notable changes to this project are documented here. The file is generated
 from Conventional Commits by [git-cliff](https://git-cliff.org) when a release is cut
 with `make cut-release`.
 
+## [0.2.0] 2026-11-24
+
+### Features
+
+- Refuse calls by shape, read hidden payloads and Lambda bytecode, open 7z and tar
+- **bench:** Score every tool on other projects' test files and add ModelAudit
+- **bench:** Held-out Hub sample of the newest repositories, ModelAudit in the Hub and speed runs
+- **bench:** Hub verdict for every high alert, msscan-only rescans, stderr to a file in the speed harness
+- Stored calls, links out of the tree, file paths in Keras configs and shard indexes
+- **bench:** Frozen and final held-out results, fair ModelAudit scoring, corpus files for the new rules
+
+### Bug fixes
+
+- **pickle:** Block torch.utils.collect_env, functools.partial, pydoc, and command sinks
+- **pickle:** Detect truncated protocol-0/1 pickles missing trailing STOP byte
+- **pickle:** Stop trusted library namespaces sheltering code loaders
+- Resolve lookups with a known result and stop grading named Lambdas as unreadable code
+- Complete calls only for code strings, unused EXT lookups in broken streams, tuple-wrapped Lambda functions
+- Report a stored function as called, and base findings on whether it runs on load
+
+### Documentation
+
+- State the evidence level
+- Add a plain-English summary and check the payload files against the Hub's own scanners
+- Name the formats and the quieter tools in the plain-English summary
+- Record the Hub cross-check in the evaluation report
+- Rename the opening section to Summary
+- Rename the opening section to Highlights
+- ADR 0007 on refusing calls by shape, architecture diagram for the new stages
+- Results of 0.2.0 on four tests, the frozen held-out run, ADR 0008, limits and roadmap
+
+### Maintenance
+
+- Set the version to 0.2.0 and regenerate both corpus comparisons with it
+
 ## [0.1.1] 2026-11-09
 
 ### Documentation
