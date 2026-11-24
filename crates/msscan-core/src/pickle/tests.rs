@@ -771,6 +771,9 @@ fn partial_around_a_library_function_is_a_deferred_call() {
     let r = run(&data);
     assert_eq!(rules(&r), vec![ids::PICKLE_DEFERRED_CALL]);
     assert_eq!(worst(&r), Severity::Medium);
+    // Both globals are reported as called (the helper is, and the function is passed to it);
+    // neither runs while the file loads.
+    assert!(r.imports.iter().all(|i| i.called && !i.runs_on_load));
 
     // The same helper around a command runner keeps its rating.
     let data = P::new(2)

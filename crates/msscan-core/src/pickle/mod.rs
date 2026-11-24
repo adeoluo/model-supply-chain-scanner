@@ -47,6 +47,10 @@ pub struct Import {
     pub count: u32,
     /// Whether the global is called or passed into a call.
     pub called: bool,
+    /// Whether one of those calls can run it while the file loads. False when the global was
+    /// only stored for later (`functools.partial(f)`), which is what findings are based on.
+    #[serde(skip)]
+    pub runs_on_load: bool,
     /// Byte offset of the first reference.
     #[serde(skip)]
     pub first_offset: usize,
@@ -274,6 +278,7 @@ impl<'a> Shared<'a> {
             tier: classify(module, name),
             count: 1,
             called: false,
+            runs_on_load: false,
             first_offset: off,
         });
         self.import_index.insert(key, i);
@@ -501,6 +506,7 @@ impl<'s, 'a> Vm<'s, 'a> {
         self.reachable_globals(value, &mut gs);
         for g in gs {
             self.sh.imports[g as usize].called = true;
+            self.sh.imports[g as usize].runs_on_load = true;
         }
     }
 
@@ -591,6 +597,14 @@ impl<'s, 'a> Vm<'s, 'a> {
             }
             _ => return None,
         };
+        // The helper is called and its first argument is passed into a call, which is what
+        // `called` reports; neither runs anything while the file loads.
+        if let Node::Global(helper) = self.nodes[func as usize] {
+            self.sh.imports[helper as usize].called = true;
+        }
+        if let Node::Global(kept) = self.nodes[items[0] as usize] {
+            self.sh.imports[kept as usize].called = true;
+        }
         // The bound arguments are handed to whatever is called later.
         for &extra in &items[1..] {
             self.mark_called(extra);
@@ -629,6 +643,7 @@ impl<'s, 'a> Vm<'s, 'a> {
         match self.nodes[func as usize].clone() {
             Node::Global(g) => {
                 self.sh.imports[g as usize].called = true;
+                self.sh.imports[g as usize].runs_on_load = true;
                 let (m, n) = {
                     let imp = &self.sh.imports[g as usize];
                     (imp.module.clone(), imp.name.clone())
@@ -1550,12 +1565,12 @@ fn analyze_with(data: &[u8], loc: &str, limits: Limits, depth: u8) -> PickleRepo
     for (index, imp) in sh.imports.iter().enumerate() {
         // A lookup helper whose every use was resolved to the global it returns says nothing by
         // itself; the resolved global is in this list too and is judged on its own.
-        if !imp.called && sh.resolved_lookups.contains_key(&(index as u32)) {
+        if !imp.runs_on_load && sh.resolved_lookups.contains_key(&(index as u32)) {
             continue;
         }
         let at = sh.at(imp.first_offset);
         let what = format!("{}.{}", imp.module, imp.name);
-        let f = match (imp.tier, imp.called) {
+        let f = match (imp.tier, imp.runs_on_load) {
             (Tier::Dangerous, true) => Some(Finding::new(ids::PICKLE_DANGEROUS_CALL, format!("calls {what}"), at)),
             (Tier::Dangerous, false) => Some(Finding::new(
                 ids::PICKLE_DANGEROUS_IMPORT,
