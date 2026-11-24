@@ -148,6 +148,9 @@ rules! {
     EMBEDDED_CODE = "MS117", "embedded-code-string", High, "CWE-506",
         "A string constant or metadata value contains a call that runs commands or code (os.system, subprocess, exec of decoded data), in plain text or base64 or hex encoded. Loading the file does not run it; code that evaluates the value would.",
         "Do not evaluate values from this file; find out why it carries code.";
+    PICKLE_DEFERRED_CALL = "MS118", "pickle-deferred-call", Medium, "CWE-502",
+        "The pickle stores a function with bound arguments (functools.partial) or a method call (operator.methodcaller) for the model to make later. Nothing runs on load, and the stored function is not a known loader or command runner.",
+        "Check that the stored function is one the pipeline needs.";
     ARCHIVE_TRAVERSAL = "MS201", "archive-path-traversal", High, "CWE-22",
         "An archive entry name is absolute or climbs out of the extraction directory.",
         "Do not extract the archive with tools that trust entry names.";
@@ -163,6 +166,9 @@ rules! {
     ARCHIVE_ENCRYPTED = "MS205", "archive-encrypted-entry", Medium, "CWE-693",
         "An archive entry is marked encrypted and could not be scanned.",
         "Obtain an unencrypted copy.";
+    LINK_LEAVES_TREE = "MS206", "link-leaves-tree", High, "CWE-59",
+        "A symbolic link in the model directory points outside it, or the whole content of a file is a path into a system location (a link stored as a file, which a git checkout turns back into a link). A loader or a server that opens the name reads whatever the link points to.",
+        "Remove the link; do not load or serve files through it.";
     NUMPY_OBJECT_ARRAY = "MS301", "numpy-object-array", Medium, "CWE-502",
         "A .npy array has an object dtype, so numpy.load(allow_pickle=True) unpickles the embedded data (scanned and reported separately).",
         "Store numeric arrays only; keep allow_pickle=False.";
@@ -190,6 +196,9 @@ rules! {
     KERAS_EXTERNAL_MODULE = "MS505", "keras-external-module", Medium, "CWE-470",
         "A Keras config names a class or function from a third-party module, so loading needs code that is not in the file (older Keras imports the module named in the config).",
         "Install the package from a trusted source or register the objects explicitly.";
+    KERAS_FILE_PATH = "MS506", "keras-config-file-path", High, "CWE-73",
+        "A value in a Keras layer config is an absolute path, a home-directory path or a path that climbs with ../. Layers that accept a file (vocabulary files of StringLookup, IntegerLookup and TextVectorization, tokenizer files in KerasHub) open it when the model is loaded (the published cases work with safe mode on), so the model reads a file chosen by its author from the loading machine and can return its content.",
+        "Do not load the model; a saved model carries its vocabulary inside the archive and has no reason to name a path.";
     TF_FILE_OP = "MS601", "tf-file-io-op", High, "CWE-73",
         "A TensorFlow graph contains an op that reads, writes or lists files (ReadFile, WriteFile, MatchingFiles and similar).",
         "Inspect the graph; serving a model should not need file access.";
@@ -241,6 +250,9 @@ rules! {
     HF_REMOTE_CODE = "MS1003", "hf-remote-code", Low, "CWE-829",
         "A Hugging Face config.json maps model classes to code in the repository (auto_map), so loading needs trust_remote_code=True.",
         "Review the repository code before enabling trust_remote_code.";
+    SHARD_INDEX_TRAVERSAL = "MS1004", "shard-index-traversal", High, "CWE-22",
+        "The index of a sharded checkpoint (the weight_map of a *.index.json file) names a shard by an absolute path or one that climbs with ../. A loader that joins the name to the model directory opens that file as weights.",
+        "Reject the checkpoint; shard names must be plain file names inside the model directory.";
     CONFIG_YAML_TAG = "MS1101", "config-unsafe-yaml-tag", High, "CWE-502",
         "A YAML file uses a PyYAML object tag (!!python/object, !!python/object/apply and similar). An unsafe yaml.load builds the named Python object, and apply or new tags call it.",
         "Load YAML with yaml.safe_load only; remove the tag.";

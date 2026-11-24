@@ -161,6 +161,8 @@ struct Shared<'a> {
     embedded: HashMap<usize, Severity>,
     /// Imports used as a lookup whose result was resolved statically, with the number of uses.
     resolved_lookups: HashMap<u32, u32>,
+    /// Deferred calls already reported, so one stored function is reported once per stream.
+    deferred_seen: std::collections::HashSet<String>,
 }
 
 /// String constants inspected for hidden payloads per stream; the rest is reported unscanned.
@@ -543,6 +545,12 @@ impl<'s, 'a> Vm<'s, 'a> {
                     "range",
                     "object",
                 ];
+                // dill names functools.partial this way; the result is that global, and what
+                // it wraps is judged where it is called.
+                if type_name == "PartialType" {
+                    let resolved = self.sh.import("functools", "partial", off);
+                    return Some(self.alloc(Node::Global(resolved)));
+                }
                 if !PLAIN.contains(&type_name.as_str()) {
                     return None;
                 }
@@ -551,6 +559,52 @@ impl<'s, 'a> Vm<'s, 'a> {
             }
             _ => None,
         }
+    }
+
+    /// A call kept for later: `functools.partial(f, ...)` around a global that is not dangerous,
+    /// or `operator.methodcaller("name", ...)` with an ordinary method name. Building one runs
+    /// nothing, so the wrapped function is not counted as called here; it is if the stream
+    /// calls the result or hands it to another call. Anything else about these two helpers
+    /// (a dangerous or computed target, a risky method name) keeps their dangerous rating.
+    fn deferred(&mut self, module: &str, name: &str, func: u32, args: u32, off: usize) -> Option<u32> {
+        let items: Vec<u32> = self.items(args).to_vec();
+        let what = match (module, name) {
+            ("functools" | "_functools", "partial") => {
+                let Node::Global(w) = self.nodes[*items.first()? as usize] else {
+                    return None;
+                };
+                let imp = &self.sh.imports[w as usize];
+                if imp.tier == Tier::Dangerous {
+                    return None;
+                }
+                format!(
+                    "keeps {}.{} with bound arguments for a later call (functools.partial)",
+                    imp.module, imp.name
+                )
+            }
+            ("operator" | "_operator", "methodcaller") => {
+                let method = self.str_of(*items.first()?)?.to_string();
+                if !policy::plain_method_name(&method) {
+                    return None;
+                }
+                format!("keeps a call of the method {method} for later (operator.methodcaller)")
+            }
+            _ => return None,
+        };
+        // The bound arguments are handed to whatever is called later.
+        for &extra in &items[1..] {
+            self.mark_called(extra);
+        }
+        if self.sh.deferred_seen.insert(what.clone()) {
+            self.sh
+                .findings
+                .push(Finding::new(ids::PICKLE_DEFERRED_CALL, what, self.sh.at(off)));
+        }
+        Some(self.alloc(Node::Call {
+            func,
+            args,
+            state: None,
+        }))
     }
 
     /// Apply a call of `func` with `args` (a tuple node) at opcode offset `off`.
@@ -564,6 +618,10 @@ impl<'s, 'a> Vm<'s, 'a> {
             if let Some(resolved) = self.resolve_lookup(&m, &n, args, off) {
                 *self.sh.resolved_lookups.entry(g).or_insert(0) += 1;
                 return resolved;
+            }
+            if let Some(kept) = self.deferred(&m, &n, func, args, off) {
+                *self.sh.resolved_lookups.entry(g).or_insert(0) += 1;
+                return kept;
             }
         }
         // Any global passed into a call can be invoked by the callee.
@@ -795,6 +853,7 @@ impl<'s, 'a> Vm<'s, 'a> {
                     const_budget: self.sh.const_budget,
                     embedded: HashMap::new(),
                     resolved_lookups: HashMap::new(),
+                    deferred_seen: std::collections::HashSet::new(),
                 };
                 let res = {
                     let mut vm = Vm::new(&mut sub, start);
@@ -1387,6 +1446,7 @@ fn analyze_with(data: &[u8], loc: &str, limits: Limits, depth: u8) -> PickleRepo
         const_budget: CONSTANT_BUDGET,
         embedded: HashMap::new(),
         resolved_lookups: HashMap::new(),
+        deferred_seen: std::collections::HashSet::new(),
     };
     let mut pos = 0usize;
     let mut pickles = 0usize;

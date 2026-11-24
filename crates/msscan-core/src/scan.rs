@@ -209,6 +209,8 @@ pub(crate) fn scan_buffer(ctx: &mut Ctx, data: &[u8], member: &str, depth: u8) -
         if want != got
             && format != "unknown"
             && format != "appledouble"
+            && format != "lfs-pointer"
+            && format != "link"
             && !(want == "json" && got == "hf-config")
             && !compressed_pickle
         {
@@ -492,15 +494,46 @@ pub fn scan_file(path: &Path, opts: &Options) -> Report {
     scan_bytes(&map, &name, opts)
 }
 
-/// Every regular file under `root` (or `root` itself), sorted, skipping hidden directories.
-pub fn collect_files(root: &Path) -> Vec<PathBuf> {
-    let mut out = Vec::new();
-    let mut stack = vec![root.to_path_buf()];
+/// Whether `target` is the blob a Hugging Face cache snapshot links to: the cache keeps files
+/// in `blobs/` and exposes them through links in `snapshots/<revision>/`.
+fn is_cache_blob(link: &Path, target: &Path) -> bool {
+    link.ancestors()
+        .filter(|a| a.file_name().is_some_and(|n| n == "snapshots"))
+        .filter_map(|a| a.parent())
+        .filter_map(|repo| std::fs::canonicalize(repo.join("blobs")).ok())
+        .any(|blobs| target.starts_with(blobs))
+}
+
+/// What a walk of `root` found: the files to scan, and the links that leave the tree.
+struct Walk {
+    files: Vec<PathBuf>,
+    /// Link path and where it points.
+    outside: Vec<(PathBuf, String)>,
+}
+
+/// Walk `root` (or take `root` itself), skipping hidden directories. A symbolic link to a file
+/// inside the tree, or to a Hugging Face cache blob, is scanned through the link unless the
+/// file it points to is already in the list; a link that leaves the tree is reported and not
+/// opened; a link to a directory is not followed.
+fn walk(root: &Path) -> Walk {
+    let mut files = Vec::new();
+    let mut links = Vec::new();
+    // The path the caller named is followed if it is a link: naming it is asking for it.
+    let start = match std::fs::metadata(root) {
+        Ok(m) if m.is_file() => {
+            return Walk {
+                files: vec![root.to_path_buf()],
+                outside: Vec::new(),
+            };
+        }
+        _ => root.to_path_buf(),
+    };
+    let mut stack = vec![start];
     while let Some(p) = stack.pop() {
         let Ok(meta) = std::fs::symlink_metadata(&p) else {
             continue;
         };
-        if meta.is_dir() {
+        if meta.is_dir() || (p == root && p.is_dir()) {
             if p != root && p.file_name().is_some_and(|n| n.to_string_lossy().starts_with('.')) {
                 continue;
             }
@@ -508,11 +541,53 @@ pub fn collect_files(root: &Path) -> Vec<PathBuf> {
                 stack.extend(rd.flatten().map(|e| e.path()));
             }
         } else if meta.is_file() {
-            out.push(p);
+            files.push(p);
+        } else if meta.file_type().is_symlink() {
+            links.push(p);
         }
     }
-    out.sort();
-    out
+    let mut outside = Vec::new();
+    if !links.is_empty() {
+        let base = std::fs::canonicalize(root).unwrap_or_else(|_| root.to_path_buf());
+        let mut seen: std::collections::HashSet<PathBuf> =
+            files.iter().filter_map(|f| std::fs::canonicalize(f).ok()).collect();
+        links.sort();
+        for link in links {
+            let written = std::fs::read_link(&link).unwrap_or_default();
+            match std::fs::canonicalize(&link) {
+                Ok(real) if real.starts_with(&base) || is_cache_blob(&link, &real) => {
+                    if real.is_file() && seen.insert(real) {
+                        files.push(link);
+                    }
+                }
+                Ok(real) => outside.push((link, real.to_string_lossy().to_string())),
+                // A link to nothing: say so only when its text points out of the tree.
+                Err(_) if written.is_absolute() || written.starts_with("..") => {
+                    outside.push((link, written.to_string_lossy().to_string()));
+                }
+                Err(_) => {}
+            }
+        }
+    }
+    files.sort();
+    Walk { files, outside }
+}
+
+/// Every file to scan under `root` (or `root` itself), sorted, skipping hidden directories.
+pub fn collect_files(root: &Path) -> Vec<PathBuf> {
+    walk(root).files
+}
+
+/// The report for a symbolic link that leaves the scanned tree. The target is not opened.
+fn link_report(link: &Path, target: &str, opts: &Options) -> Report {
+    let name = link.to_string_lossy().to_string();
+    let mut ctx = Ctx::new(*opts);
+    ctx.findings.push(Finding::new(
+        ids::LINK_LEAVES_TREE,
+        format!("symbolic link to {target}, outside the scanned directory; the target was not opened"),
+        &name,
+    ));
+    finish(&name, &[], 0, ctx, "link".into(), Instant::now())
 }
 
 /// Scan a file or a directory tree in parallel.
@@ -524,7 +599,11 @@ pub fn scan_path(root: &Path, opts: &Options) -> Vec<Report> {
             "no such file or directory".into(),
         )];
     }
-    collect_files(root).par_iter().map(|p| scan_file(p, opts)).collect()
+    let found = walk(root);
+    let mut reports: Vec<Report> = found.files.par_iter().map(|p| scan_file(p, opts)).collect();
+    reports.extend(found.outside.iter().map(|(l, t)| link_report(l, t, opts)));
+    reports.sort_by(|a, b| a.path.cmp(&b.path));
+    reports
 }
 
 #[cfg(test)]

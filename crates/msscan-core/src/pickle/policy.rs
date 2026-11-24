@@ -758,6 +758,95 @@ pub fn classify(module: &str, name: &str) -> Tier {
     Tier::Unknown
 }
 
+/// Operator methods: what `operator.methodcaller("__floordiv__", 3600)` names when a pipeline
+/// stores arithmetic on its input.
+const OPERATOR_METHODS: &[&str] = &[
+    "__add__",
+    "__sub__",
+    "__mul__",
+    "__matmul__",
+    "__truediv__",
+    "__floordiv__",
+    "__mod__",
+    "__pow__",
+    "__radd__",
+    "__rsub__",
+    "__rmul__",
+    "__rmatmul__",
+    "__rtruediv__",
+    "__rfloordiv__",
+    "__rmod__",
+    "__rpow__",
+    "__neg__",
+    "__pos__",
+    "__abs__",
+    "__invert__",
+    "__and__",
+    "__or__",
+    "__xor__",
+    "__lshift__",
+    "__rshift__",
+    "__lt__",
+    "__le__",
+    "__eq__",
+    "__ne__",
+    "__gt__",
+    "__ge__",
+    "__len__",
+    "__contains__",
+    "__getitem__",
+];
+
+/// Method names that evaluate text, run something or touch files when called on a value the
+/// pipeline receives (`DataFrame.eval`, `DataFrame.query`, `to_pickle`, ...).
+const RISKY_METHODS: &[&str] = &[
+    "eval",
+    "query",
+    "exec",
+    "system",
+    "popen",
+    "pipe",
+    "apply",
+    "applymap",
+    "map",
+    "agg",
+    "aggregate",
+    "transform",
+    "tofile",
+    "dump",
+    "dumps",
+    "save",
+    "savez",
+    "write",
+    "writelines",
+    "read",
+    "open",
+    "unlink",
+    "remove",
+    "rmdir",
+    "rename",
+    "format",
+    "format_map",
+    "send",
+    "connect",
+    "call",
+];
+
+/// Whether `operator.methodcaller(name)` only names an ordinary method: an operator method, or
+/// a public name that is not a loader, an evaluator, a writer or a `to_*` exporter.
+pub fn plain_method_name(name: &str) -> bool {
+    if name.starts_with('_') {
+        return OPERATOR_METHODS.contains(&name);
+    }
+    !name.is_empty()
+        && name.chars().all(|c| c.is_ascii_alphanumeric() || c == '_')
+        && !LOADER_NAMES.contains(&name)
+        && !RISKY_METHODS.contains(&name)
+        && !name.starts_with("to_")
+        && !name.starts_with("read_")
+        && !name.starts_with("load")
+}
+
 /// Standard-library callables that only rebuild plain values and are allowed to be called.
 /// Everything else in the standard library is refused when a pickle calls it (see `call_risk`).
 const STDLIB_CALL_OK: &[(&str, &str)] = &[

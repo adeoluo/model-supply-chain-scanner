@@ -74,7 +74,16 @@ pub fn check(d: &[u8], total: u64, loc: &str) -> (Vec<Finding>, Info) {
     };
     info.header_len = n;
     if n > MAX_HEADER {
-        out.push(bad(format!("header length {n} exceeds the 100 MB limit")));
+        // Eight bytes of text read as a number are always this large: the file is something
+        // else under a .safetensors name (an error page, an encoded pointer), which the
+        // safetensors library refuses to open.
+        let text = d[..8].iter().all(|b| b.is_ascii_graphic() || b.is_ascii_whitespace());
+        out.push(if text {
+            bad("the file starts with text, not a header length: it is not a safetensors file".into())
+                .with_severity(crate::finding::Severity::Medium)
+        } else {
+            bad(format!("header length {n} exceeds the 100 MB limit"))
+        });
         return (out, info);
     }
     if 8 + n > total {

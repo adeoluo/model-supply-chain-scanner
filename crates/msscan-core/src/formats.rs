@@ -56,6 +56,62 @@ pub fn is_appledouble(data: &[u8]) -> bool {
     data.starts_with(&[0x00, 0x05, 0x16, 0x07])
 }
 
+/// Top-level directories that a link out of a model repository has no reason to reach.
+const SYSTEM_ROOTS: &[&str] = &[
+    "etc",
+    "proc",
+    "root",
+    "home",
+    "usr",
+    "var",
+    "sys",
+    "dev",
+    "tmp",
+    "run",
+    "boot",
+    "bin",
+    "sbin",
+    "opt",
+    "mnt",
+    "private",
+    "Users",
+    "Windows",
+    "ProgramData",
+];
+
+/// A symbolic link stored as a file, which is what a hub serves for a link committed to a
+/// repository: the whole content is one path, absolute or climbing with `../`, that lands in a
+/// system location or a home directory. Returns the path.
+pub fn link_stub(data: &[u8]) -> Option<&str> {
+    if data.len() < 4 || data.len() > 1024 {
+        return None;
+    }
+    let text = std::str::from_utf8(data).ok()?;
+    if text.chars().any(|c| c.is_control() || c.is_whitespace()) {
+        return None;
+    }
+    if text.starts_with("~/") {
+        return Some(text);
+    }
+    let mut parts = text.split('/').peekable();
+    let absolute = text.starts_with('/');
+    let mut climbs = 0;
+    if absolute {
+        parts.next();
+    }
+    while parts.peek() == Some(&"..") {
+        parts.next();
+        climbs += 1;
+    }
+    let first = parts.next()?;
+    ((absolute || climbs > 0) && parts.peek().is_some() && SYSTEM_ROOTS.contains(&first)).then_some(text)
+}
+
+/// The pointer file git leaves in place of a large file that was not downloaded.
+pub fn is_lfs_pointer(data: &[u8]) -> bool {
+    data.starts_with(b"version https://git-lfs.github.com/spec/")
+}
+
 /// Detect the format of `data` and run the matching analyzer.
 pub(crate) fn dispatch(ctx: &mut Ctx, data: &[u8], member: &str, depth: u8) -> String {
     let total = if depth == 0 {
@@ -63,6 +119,24 @@ pub(crate) fn dispatch(ctx: &mut Ctx, data: &[u8], member: &str, depth: u8) -> S
     } else {
         data.len() as u64
     };
+    if depth == 0 && is_lfs_pointer(data) {
+        ctx.findings.push(Finding::new(
+            ids::FORMAT_UNKNOWN,
+            "Git LFS pointer: the real file was not downloaded, so there was nothing to scan",
+            member,
+        ));
+        return "lfs-pointer".into();
+    }
+    if depth == 0
+        && let Some(target) = link_stub(data)
+    {
+        ctx.findings.push(Finding::new(
+            ids::LINK_LEAVES_TREE,
+            format!("the whole file is the path {target}: a symbolic link stored as a file"),
+            member,
+        ));
+        return "link".into();
+    }
     match sniff(data, member) {
         Some("zip") => scan::scan_zip(ctx, data, member, depth),
         Some("appledouble") => {

@@ -759,3 +759,73 @@ fn lookups_with_a_known_result_are_resolved() {
         .stop();
     assert_eq!(worst(&run(&dill_code)), Severity::Critical);
 }
+
+#[test]
+fn partial_around_a_library_function_is_a_deferred_call() {
+    // FunctionTransformer(func=partial(check_array, ...)): nothing runs on load.
+    let data = P::new(2)
+        .global("functools", "partial")
+        .global("sklearn.utils.validation", "check_array")
+        .op(&[0x85, b'R'])
+        .stop();
+    let r = run(&data);
+    assert_eq!(rules(&r), vec![ids::PICKLE_DEFERRED_CALL]);
+    assert_eq!(worst(&r), Severity::Medium);
+
+    // The same helper around a command runner keeps its rating.
+    let data = P::new(2)
+        .global("functools", "partial")
+        .global("os", "system")
+        .op(&[0x85, b'R'])
+        .stop();
+    assert_eq!(worst(&run(&data)), Severity::Critical);
+
+    // Calling what partial returned is a call of the wrapped function at load time.
+    let data = P::new(2)
+        .global("functools", "partial")
+        .global("sklearn.utils.validation", "check_array")
+        .op(&[0x85, b'R', b')', b'R'])
+        .stop();
+    let r = run(&data);
+    assert_eq!(worst(&r), Severity::Critical);
+    assert!(rules(&r).contains(&ids::PICKLE_INDIRECT_CALL));
+    assert!(rules(&r).contains(&ids::PICKLE_NON_CONSTRUCTOR_CALL));
+
+    // dill names partial through _load_type("PartialType").
+    let data = P::new(2)
+        .global("dill._dill", "_load_type")
+        .s("PartialType")
+        .op(&[0x85, b'R'])
+        .global("sklearn.utils.validation", "check_array")
+        .op(&[0x85, b'R'])
+        .stop();
+    let r = run(&data);
+    assert_eq!(rules(&r), vec![ids::PICKLE_DEFERRED_CALL]);
+}
+
+#[test]
+fn methodcaller_is_graded_by_the_method_it_names() {
+    let caller = |method: &str| {
+        P::new(2)
+            .global("operator", "methodcaller")
+            .s(method)
+            .op(&[0x85, b'R'])
+            .stop()
+    };
+    for plain in ["__floordiv__", "fillna", "strip", "astype"] {
+        let r = run(&caller(plain));
+        assert_eq!(rules(&r), vec![ids::PICKLE_DEFERRED_CALL], "{plain}");
+    }
+    for risky in [
+        "system",
+        "eval",
+        "query",
+        "__reduce__",
+        "to_pickle",
+        "load",
+        "_private",
+        "__class__",
+    ] {
+        assert_eq!(worst(&run(&caller(risky))), Severity::Critical, "{risky}");
+    }
+}

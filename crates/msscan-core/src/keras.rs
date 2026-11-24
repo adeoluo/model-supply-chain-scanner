@@ -179,6 +179,30 @@ struct Walk {
     external: Vec<String>,
     custom: Vec<String>,
     tf_funcs: Vec<String>,
+    /// Config values that are file paths outside the model: `key = path`.
+    paths: Vec<String>,
+}
+
+/// Whether a config value names a file outside the model: an absolute path with at least two
+/// components, a home-directory path, a Windows drive path, or a path that starts by climbing.
+/// Device strings (`/device:GPU:0`, `/job:worker/task:0`) and single tokens (`/s`) are not paths.
+fn is_outside_path(v: &str) -> bool {
+    if v.len() > 4096 || v.chars().any(|c| c.is_control() || c.is_whitespace()) {
+        return false;
+    }
+    let b = v.as_bytes();
+    if v.starts_with("~/") || v.starts_with("../") || v.starts_with("..\\") {
+        return v.len() > 3;
+    }
+    if b.len() > 3 && b[0].is_ascii_alphabetic() && b[1] == b':' && (b[2] == b'\\' || b[2] == b'/') {
+        return true;
+    }
+    let Some(rest) = v.strip_prefix('/') else {
+        return false;
+    };
+    let mut parts = rest.split('/');
+    let first = parts.next().unwrap_or("");
+    !first.is_empty() && !first.contains(':') && parts.next().is_some_and(|p| !p.is_empty())
 }
 
 fn walk(v: &Value, w: &mut Walk, depth: u32, in_lambda: bool) {
@@ -255,6 +279,16 @@ fn walk(v: &Value, w: &mut Walk, depth: u32, in_lambda: bool) {
                 && m.get("module").is_none_or(Value::is_null)
             {
                 w.custom.push(r.to_string());
+            }
+            if !in_lambda && !is_lambda {
+                for (key, x) in m {
+                    if let Value::String(text) = x
+                        && !matches!(key.as_str(), "name" | "module" | "class_name" | "registered_name")
+                        && is_outside_path(text)
+                    {
+                        w.paths.push(format!("{key} = {text}"));
+                    }
+                }
             }
             for x in m.values() {
                 walk(x, w, depth + 1, in_lambda || is_lambda);
@@ -395,6 +429,14 @@ pub fn check_configs(configs: &[Value], loc: &str) -> Vec<Finding> {
             loc,
         ));
     }
+    let paths = dedup(w.paths);
+    if !paths.is_empty() {
+        out.push(Finding::new(
+            ids::KERAS_FILE_PATH,
+            format!("config names a file outside the model: {}", short_list(&paths)),
+            loc,
+        ));
+    }
     let external = dedup(w.external);
     if !external.is_empty() {
         out.push(Finding::new(
@@ -522,6 +564,42 @@ pub(crate) mod tests {
         );
         let f = check_config_json(wrapped.as_bytes(), "x");
         assert!(f[0].severity == Severity::Medium, "{f:?}");
+    }
+
+    #[test]
+    fn file_paths_in_layer_configs() {
+        // A tokenizer told to read its special tokens from a path on the loading machine.
+        let c = r#"{"module": null, "class_name": "Holder", "registered_name": "p>Holder", "config": {"tokenizer": {"module": "keras_hub.src.models.whisper.whisper_tokenizer", "class_name": "WhisperTokenizer", "config": {"name": "tok", "special_tokens": "/home/user/.ssh/id_rsa", "config_file": "tokenizer.json"}}}}"#;
+        let f = check_config_json(c.as_bytes(), "x");
+        let hit = f.iter().find(|x| x.rule == ids::KERAS_FILE_PATH).expect("path finding");
+        assert_eq!(hit.severity, Severity::High);
+        assert!(hit.message.contains("special_tokens = /home/user/.ssh/id_rsa"));
+        for path in [
+            "~/.aws/credentials",
+            "../../../etc/passwd",
+            "C:\\Users\\a\\secret.txt",
+            "/etc/passwd",
+        ] {
+            assert!(is_outside_path(path), "{path}");
+        }
+        // The same layer with its tokens inline, device strings, tokens and relative asset names.
+        let ok = r#"{"class_name": "StringLookup", "config": {"name": "/scope/lookup", "vocabulary": ["/", "/s", "//"], "oov_token": "</s>", "device": "/device:GPU:0", "config_file": "tokenizer.json", "asset": "assets/vocab.txt", "pattern": "/"}}"#;
+        assert!(
+            check_config_json(ok.as_bytes(), "x")
+                .iter()
+                .all(|x| x.rule != ids::KERAS_FILE_PATH)
+        );
+        for plain in [
+            "/",
+            "/s",
+            "/job:worker/task:0",
+            "/device:GPU:0",
+            "a/b/c",
+            "</s>",
+            "/two words/x",
+        ] {
+            assert!(!is_outside_path(plain), "{plain}");
+        }
     }
 
     #[test]

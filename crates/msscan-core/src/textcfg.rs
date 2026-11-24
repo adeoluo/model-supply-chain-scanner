@@ -8,6 +8,11 @@ use crate::finding::{Finding, Severity, ids};
 use crate::jinja;
 use crate::pickle::policy;
 
+/// PyYAML tags that name a built-in value type and take no module path.
+const PLAIN_TAGS: &[&str] = &[
+    "tuple", "str", "unicode", "bytes", "int", "long", "float", "complex", "bool", "none", "list", "dict",
+];
+
 fn base_name(name: &str) -> String {
     name.rsplit(['/', '\\']).next().unwrap_or(name).to_ascii_lowercase()
 }
@@ -95,19 +100,23 @@ pub fn check_yaml(d: &[u8], loc: &str) -> Vec<Finding> {
         let dangerous = target
             .rsplit_once('.')
             .is_some_and(|(m, n)| policy::classify(m, n) == policy::Tier::Dangerous);
+        // PyYAML's tags for built-in values (`!!python/tuple`, `!!python/str`, ...) build that
+        // value and nothing else; its safe loader rejects them, so they are worth a note only.
+        let kind = tag.trim_start_matches('!').trim_start_matches("python/");
+        let plain = PLAIN_TAGS.contains(&kind);
         let sev = if calls || dangerous {
             Severity::Critical
+        } else if plain {
+            Severity::Low
         } else {
             Severity::High
         };
-        out.push(
-            Finding::new(
-                ids::CONFIG_YAML_TAG,
-                format!("YAML tag {tag} makes an unsafe yaml.load build a Python object"),
-                loc,
-            )
-            .with_severity(sev),
-        );
+        let message = if plain {
+            format!("YAML tag {tag} builds a plain Python value and needs a loader other than yaml.safe_load")
+        } else {
+            format!("YAML tag {tag} makes an unsafe yaml.load build a Python object")
+        };
+        out.push(Finding::new(ids::CONFIG_YAML_TAG, message, loc).with_severity(sev));
     }
     for target in &targets {
         out.extend(target_finding(target, loc));
@@ -139,6 +148,22 @@ mod tests {
         assert!(is_yaml_name("conf/model_config.yaml") && is_yaml_name("x.YML") && is_yaml_name("m/MLmodel"));
         assert!(!is_yaml_name("yaml.bin"));
         assert!(looks_like_text(b"a: 1\n") && !looks_like_text(b"\x80\x04\x00") && !looks_like_text(b"  "));
+    }
+
+    #[test]
+    fn plain_value_tags_are_low() {
+        let y = b"sizes: !!python/tuple\n  - 2\n  - 2\nname: !!python/str abc\n";
+        let f = check_yaml(y, "c.yaml");
+        assert_eq!(
+            rules(&f),
+            vec![
+                (ids::CONFIG_YAML_TAG, Severity::Low),
+                (ids::CONFIG_YAML_TAG, Severity::Low)
+            ]
+        );
+        // A tag that only starts like a plain one is still an object tag.
+        let f = check_yaml(b"x: !!python/tuple:os.system\n", "c.yaml");
+        assert_eq!(f[0].severity, Severity::Critical);
     }
 
     #[test]

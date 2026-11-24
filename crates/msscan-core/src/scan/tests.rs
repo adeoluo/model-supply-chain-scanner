@@ -431,3 +431,85 @@ fn safetensors_metadata_is_checked_for_staged_payloads() {
         Verdict::Clean
     );
 }
+
+#[cfg(unix)]
+#[test]
+fn links_are_followed_inside_the_tree_and_reported_outside_it() {
+    use std::os::unix::fs::symlink;
+    let top = std::env::temp_dir().join(format!("msscan-links-{}", std::process::id()));
+    let _ = std::fs::remove_dir_all(&top);
+    // The Hugging Face cache layout: snapshots/<revision>/name -> ../../blobs/<hash>.
+    let snap = top.join("models--a--b/snapshots/rev");
+    std::fs::create_dir_all(&snap).unwrap();
+    std::fs::create_dir_all(top.join("models--a--b/blobs")).unwrap();
+    std::fs::write(top.join("models--a--b/blobs/abc"), GETCWD).unwrap();
+    std::fs::write(top.join("secret.pkl"), GETCWD).unwrap();
+    symlink("../../blobs/abc", snap.join("model.pkl")).unwrap();
+    symlink("../../../secret.pkl", snap.join("leak.pkl")).unwrap();
+    symlink("/nonexistent/msscan/target", snap.join("gone.bin")).unwrap();
+    symlink("model.pkl", snap.join("zz-again.pkl")).unwrap();
+    let opts = Options::default();
+
+    let rs = scan_path(&snap, &opts);
+    let by_name = |n: &str| rs.iter().find(|r| r.path.ends_with(n));
+    // The blob is scanned through its link, once.
+    assert_eq!(by_name("model.pkl").unwrap().verdict, Verdict::Malicious);
+    assert!(by_name("zz-again.pkl").is_none());
+    // Links that leave the tree are reported and their targets are not opened.
+    for name in ["leak.pkl", "gone.bin"] {
+        let r = by_name(name).unwrap();
+        assert_eq!(r.format, "link", "{name}");
+        assert_eq!(r.findings[0].rule, ids::LINK_LEAVES_TREE);
+        assert!(r.imports.is_empty());
+    }
+    assert_eq!(rs.len(), 3);
+
+    // Scanning the whole repository cache reads each blob once.
+    let whole = scan_path(&top.join("models--a--b"), &opts);
+    assert_eq!(whole.iter().filter(|r| r.format != "link").count(), 1);
+    assert_eq!(whole.len(), 3);
+    // A link named on the command line is followed.
+    let direct = scan_path(&snap.join("leak.pkl"), &opts);
+    assert_eq!(direct[0].verdict, Verdict::Malicious);
+    std::fs::remove_dir_all(&top).unwrap();
+}
+
+#[test]
+fn link_stubs_and_lfs_pointers() {
+    let o = Options::default();
+    let r = scan_bytes(b"../../../etc/hostname", "rel.safetensors", &o);
+    assert_eq!(
+        (r.format.as_str(), r.findings[0].rule.as_str()),
+        ("link", ids::LINK_LEAVES_TREE)
+    );
+    assert_eq!(r.max_severity, Some(Severity::High));
+    for stub in ["/etc/passwd", "~/.ssh/id_rsa", "/proc/self/environ"] {
+        assert_eq!(scan_bytes(stub.as_bytes(), "x.bin", &o).format, "link", "{stub}");
+    }
+    // Links that stay among model files, and ordinary short text, are not stubs.
+    for plain in [
+        "../../model.safetensors",
+        "../blobs/abc",
+        "weights/model.bin",
+        "/etc",
+        "etc/hosts",
+        "a b/../etc/x",
+    ] {
+        assert!(crate::formats::link_stub(plain.as_bytes()).is_none(), "{plain}");
+    }
+    let lfs = b"version https://git-lfs.github.com/spec/v1\noid sha256:00\nsize 12\n";
+    for name in ["model.safetensors", "pytorch_model.bin"] {
+        let r = scan_bytes(lfs, name, &o);
+        assert_eq!(r.format, "lfs-pointer");
+        assert_eq!(r.max_severity, Some(Severity::Info));
+    }
+    // Text under a .safetensors name is not a crafted header.
+    let r = scan_bytes(b"dmVyc2lvbiBodHRwczovL2dpdC1sZnM=", "model.safetensors", &o);
+    assert_eq!(r.max_severity, Some(Severity::Medium));
+    let mut crafted = (u64::MAX / 2).to_le_bytes().to_vec();
+    crafted.extend_from_slice(b"{}");
+    assert_eq!(
+        scan_bytes(&crafted, "model.safetensors", &o).max_severity,
+        Some(Severity::High)
+    );
+}
