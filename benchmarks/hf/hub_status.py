@@ -4,8 +4,9 @@ The Hub scans every file with several tools (Protect AI Guardian, JFrog, pickles
 VirusTotal) and publishes the result. This script reads that result for each payload file of the
 corpus, so the question "did msscan find something nobody knew about?" has a checkable answer.
 
-It also records whether the repository presents itself as security test material, using the same
-name rule as ``review.py`` and a look at its model card.
+It also records whether the repository presents itself as security test material: by its name
+(the rule of ``review.py``), in its model card, or because another repository of the same owner
+is named as one.
 
 Repository names stay in the private data directory. The committed output holds pseudonymous
 file ids, the basis of the payload label, the Hub statuses and counts.
@@ -77,7 +78,25 @@ def presents_as_test(repo: str, path: str) -> dict[str, bool]:
     return {
         "by_name": bool(SECURITY_TEST.search(repo) or SECURITY_TEST.search(path)),
         "by_model_card": code == 200 and bool(CARD_WORDS.search(card)),
+        "by_owner": owner_runs_tests(repo.split("/")[0]),
     }
+
+
+OWNERS: dict[str, bool] = {}
+
+
+def owner_runs_tests(owner: str) -> bool:
+    """Whether another repository of the same owner is named as security test material.
+
+    An account that publishes ``x-scan-poc`` next to ``x-scan-pad`` is running an experiment in
+    both, whatever the second one is called.
+    """
+    if owner not in OWNERS:
+        quoted = urllib.parse.quote(owner, safe="")
+        code, text = fetch(f"https://huggingface.co/api/models?author={quoted}&limit=200")
+        names = [m.get("id", "") for m in json.loads(text)] if code == 200 else []
+        OWNERS[owner] = any(SECURITY_TEST.search(n.split("/", 1)[-1]) for n in names)
+    return OWNERS[owner]
 
 
 def by_id_rules(corpus: Path, fid: str) -> list[str]:
@@ -94,6 +113,7 @@ def main() -> None:
     ap.add_argument("--review", type=Path, default=Path("benchmarks/results/hf_review.json"))
     ap.add_argument("--corpus", type=Path, default=Path("benchmarks/results/hf_corpus.json"))
     ap.add_argument("--out", type=Path, default=Path("benchmarks/results/hf_hub_status"))
+    ap.add_argument("--private-rows", default="hf_private_rows.jsonl")
     args = ap.parse_args()
 
     review = json.loads(args.review.read_text())
@@ -111,7 +131,7 @@ def main() -> None:
         if r["label"] == "payload" or r["id"] in high
     }
     private = {}
-    with (args.data / "private" / "hf_private_rows.jsonl").open() as fh:
+    with (args.data / "private" / args.private_rows).open() as fh:
         for line in fh:
             row = json.loads(line)
             if row["id"] in payload:
@@ -133,7 +153,7 @@ def main() -> None:
                 "hub_status": hub["status"],
                 "hub_scanners": hub["scanners"],
                 "hub_flags_it": hub["status"] in FLAGGED,
-                "presents_as_security_test": test["by_name"] or test["by_model_card"],
+                "presents_as_security_test": any(test.values()),
                 "presents_as_security_test_by": [k for k, v in test.items() if v],
             }
         )

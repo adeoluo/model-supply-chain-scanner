@@ -5,8 +5,10 @@ and its repository, by fixed rules applied in this order:
 
 1. ``payload``: the file reaches a system or evaluation primitive when loaded: a pickle call
    into os, posix, nt, subprocess, sys, socket, requests or ``builtins.eval``/``exec``, a Keras
-   config that names such a module, a GGUF chat template that reaches Python internals, or an
-   ONNX external data path that leaves the model directory.
+   config that names such a module, a GGUF chat template that reaches Python internals, or a
+   path that leaves the model: ONNX external data, a shard named in a checkpoint index, a
+   Keras layer config naming a file on the loading machine, or a symbolic link stored as a
+   file that points into a system location.
 2. ``security-test``: the repository describes itself as security test material (its name has
    a word such as poc, malicious, exploit, payload, bypass, huntr or test-models). These files
    are reported as a group; they include crafted payloads and benign baselines.
@@ -56,7 +58,7 @@ EXEC_MODULES = {
     "pty",
 }
 EXEC_BUILTINS = {"eval", "exec", "compile", "__import__"}
-PAYLOAD_RULES = {"MS502", "MS701", "MS801"}
+PAYLOAD_RULES = {"MS206", "MS502", "MS506", "MS701", "MS801", "MS1004"}
 CODE_RULES = {"MS501", "MS503", "MS505", "MS402", "MS1003"}
 NONSTANDARD_RULES = {
     "MS803",
@@ -152,11 +154,16 @@ def main() -> None:
     ap.add_argument("--data", type=Path, required=True)
     ap.add_argument("--corpus", type=Path, default=Path("benchmarks/results/hf_corpus.json"))
     ap.add_argument("--out", type=Path, required=True)
+    ap.add_argument(
+        "--private-rows",
+        default="hf_private_rows.jsonl",
+        help="file under DATA/private holding the findings that belong to --corpus",
+    )
     args = ap.parse_args()
     corpus = json.loads(args.corpus.read_text())
     rows = corpus["rows"]
     priv = {}
-    for line in (args.data / "private" / "hf_private_rows.jsonl").open():
+    for line in (args.data / "private" / args.private_rows).open():
         d = json.loads(line)
         priv[d["id"]] = d
     labels: dict[str, str] = {}

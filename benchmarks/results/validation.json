@@ -34,7 +34,13 @@
    "malicious/config/pyyaml/config.yaml",
    "malicious/config/json/config.json",
    "malicious/config/chat_template.jinja",
-   "malicious/keras/lambda-import.keras"
+   "malicious/keras/lambda-import.keras",
+   "malicious/keras/tokenizer-file-absolute.keras",
+   "malicious/keras/tokenizer-file-home.keras",
+   "malicious/keras/tokenizer-file-climbing.keras",
+   "malicious/hf-json/climbing.safetensors.index.json",
+   "malicious/hf-json/absolute.safetensors.index.json",
+   "malicious/link/etc-hostname.safetensors"
   ]
  },
  "rows": [
@@ -49,7 +55,7 @@
    "loaded": true,
    "sandbox": "",
    "error": "",
-   "seconds": 0.029
+   "seconds": 0.031
   },
   {
    "path": "malicious/pickle/reduce-os-getcwd.p2.pkl",
@@ -62,7 +68,7 @@
    "loaded": true,
    "sandbox": "",
    "error": "",
-   "seconds": 0.027
+   "seconds": 0.031
   },
   {
    "path": "malicious/pickle/reduce-os-getcwd.p4.pkl",
@@ -75,7 +81,7 @@
    "loaded": true,
    "sandbox": "",
    "error": "",
-   "seconds": 0.028
+   "seconds": 0.034
   },
   {
    "path": "malicious/pickle/reduce-os-getcwd.p5.pkl",
@@ -88,7 +94,7 @@
    "loaded": true,
    "sandbox": "",
    "error": "",
-   "seconds": 0.029
+   "seconds": 0.027
   },
   {
    "path": "malicious/pickle/builtins-eval.p0.pkl",
@@ -101,7 +107,7 @@
    "loaded": true,
    "sandbox": "",
    "error": "",
-   "seconds": 0.031
+   "seconds": 0.027
   },
   {
    "path": "malicious/pickle/builtins-eval.p2.pkl",
@@ -114,7 +120,7 @@
    "loaded": true,
    "sandbox": "",
    "error": "",
-   "seconds": 0.031
+   "seconds": 0.025
   },
   {
    "path": "malicious/pickle/builtins-eval.p4.pkl",
@@ -140,7 +146,7 @@
    "loaded": true,
    "sandbox": "",
    "error": "",
-   "seconds": 0.028
+   "seconds": 0.027
   },
   {
    "path": "malicious/pickle/builtins-exec.p0.pkl",
@@ -153,7 +159,7 @@
    "loaded": true,
    "sandbox": "",
    "error": "",
-   "seconds": 0.027
+   "seconds": 0.026
   },
   {
    "path": "malicious/pickle/builtins-exec.p2.pkl",
@@ -166,7 +172,7 @@
    "loaded": true,
    "sandbox": "",
    "error": "",
-   "seconds": 0.027
+   "seconds": 0.029
   },
   {
    "path": "malicious/pickle/builtins-exec.p4.pkl",
@@ -179,7 +185,7 @@
    "loaded": true,
    "sandbox": "",
    "error": "",
-   "seconds": 0.026
+   "seconds": 0.027
   },
   {
    "path": "malicious/pickle/builtins-exec.p5.pkl",
@@ -192,7 +198,7 @@
    "loaded": true,
    "sandbox": "",
    "error": "",
-   "seconds": 0.026
+   "seconds": 0.027
   },
   {
    "path": "malicious/pickle/runpy-run-code.p0.pkl",
@@ -205,7 +211,7 @@
    "loaded": true,
    "sandbox": "",
    "error": "",
-   "seconds": 0.028
+   "seconds": 0.031
   },
   {
    "path": "malicious/pickle/runpy-run-code.p2.pkl",
@@ -218,7 +224,7 @@
    "loaded": true,
    "sandbox": "",
    "error": "",
-   "seconds": 0.028
+   "seconds": 0.031
   },
   {
    "path": "malicious/pickle/runpy-run-code.p4.pkl",
@@ -231,7 +237,7 @@
    "loaded": true,
    "sandbox": "",
    "error": "",
-   "seconds": 0.026
+   "seconds": 0.031
   },
   {
    "path": "malicious/pickle/runpy-run-code.p5.pkl",
@@ -244,7 +250,7 @@
    "loaded": true,
    "sandbox": "",
    "error": "",
-   "seconds": 0.029
+   "seconds": 0.028
   },
   {
    "path": "malicious/pickle/numpy-runstring.p0.pkl",
@@ -257,7 +263,7 @@
    "loaded": true,
    "sandbox": "",
    "error": "",
-   "seconds": 0.103
+   "seconds": 0.149
   },
   {
    "path": "malicious/pickle/numpy-runstring.p2.pkl",
@@ -270,7 +276,7 @@
    "loaded": true,
    "sandbox": "",
    "error": "",
-   "seconds": 0.104
+   "seconds": 0.148
   },
   {
    "path": "malicious/pickle/numpy-runstring.p4.pkl",
@@ -283,7 +289,7 @@
    "loaded": true,
    "sandbox": "",
    "error": "",
-   "seconds": 0.102
+   "seconds": 0.121
   },
   {
    "path": "malicious/pickle/numpy-runstring.p5.pkl",
@@ -296,7 +302,7 @@
    "loaded": true,
    "sandbox": "",
    "error": "",
-   "seconds": 0.101
+   "seconds": 0.1
   },
   {
    "path": "malicious/pickle/timeit.p0.pkl",
@@ -309,7 +315,7 @@
    "loaded": true,
    "sandbox": "",
    "error": "",
-   "seconds": 0.029
+   "seconds": 0.027
   },
   {
    "path": "malicious/pickle/timeit.p2.pkl",
@@ -335,7 +341,7 @@
    "loaded": true,
    "sandbox": "",
    "error": "",
-   "seconds": 0.027
+   "seconds": 0.028
   },
   {
    "path": "malicious/pickle/timeit.p5.pkl",
@@ -348,7 +354,7 @@
    "loaded": true,
    "sandbox": "",
    "error": "",
-   "seconds": 0.028
+   "seconds": 0.027
   },
   {
    "path": "malicious/pickle/methodcaller-interpreter.p0.pkl",
@@ -361,7 +367,7 @@
    "loaded": true,
    "sandbox": "",
    "error": "",
-   "seconds": 0.029
+   "seconds": 0.031
   },
   {
    "path": "malicious/pickle/methodcaller-interpreter.p2.pkl",
@@ -374,7 +380,7 @@
    "loaded": true,
    "sandbox": "",
    "error": "",
-   "seconds": 0.032
+   "seconds": 0.03
   },
   {
    "path": "malicious/pickle/methodcaller-interpreter.p4.pkl",
@@ -400,7 +406,7 @@
    "loaded": true,
    "sandbox": "",
    "error": "",
-   "seconds": 0.032
+   "seconds": 0.031
   },
   {
    "path": "malicious/pickle/getattr-import.p0.pkl",
@@ -413,7 +419,7 @@
    "loaded": true,
    "sandbox": "",
    "error": "",
-   "seconds": 0.03
+   "seconds": 0.027
   },
   {
    "path": "malicious/pickle/getattr-import.p2.pkl",
@@ -426,7 +432,7 @@
    "loaded": true,
    "sandbox": "",
    "error": "",
-   "seconds": 0.028
+   "seconds": 0.027
   },
   {
    "path": "malicious/pickle/getattr-import.p4.pkl",
@@ -452,7 +458,7 @@
    "loaded": true,
    "sandbox": "",
    "error": "",
-   "seconds": 0.026
+   "seconds": 0.027
   },
   {
    "path": "malicious/pickle/importlib-getattr.p0.pkl",
@@ -478,7 +484,7 @@
    "loaded": true,
    "sandbox": "",
    "error": "",
-   "seconds": 0.029
+   "seconds": 0.025
   },
   {
    "path": "malicious/pickle/importlib-getattr.p4.pkl",
@@ -491,7 +497,7 @@
    "loaded": true,
    "sandbox": "",
    "error": "",
-   "seconds": 0.026
+   "seconds": 0.027
   },
   {
    "path": "malicious/pickle/importlib-getattr.p5.pkl",
@@ -517,7 +523,7 @@
    "loaded": true,
    "sandbox": "",
    "error": "",
-   "seconds": 0.027
+   "seconds": 0.028
   },
   {
    "path": "malicious/pickle/partial-print.p2.pkl",
@@ -530,7 +536,7 @@
    "loaded": true,
    "sandbox": "",
    "error": "",
-   "seconds": 0.028
+   "seconds": 0.027
   },
   {
    "path": "malicious/pickle/partial-print.p4.pkl",
@@ -569,7 +575,7 @@
    "loaded": true,
    "sandbox": "",
    "error": "",
-   "seconds": 0.031
+   "seconds": 0.033
   },
   {
    "path": "malicious/pickle/subprocess-harmless.p2.pkl",
@@ -582,7 +588,7 @@
    "loaded": true,
    "sandbox": "",
    "error": "",
-   "seconds": 0.031
+   "seconds": 0.032
   },
   {
    "path": "malicious/pickle/subprocess-harmless.p4.pkl",
@@ -595,7 +601,7 @@
    "loaded": true,
    "sandbox": "",
    "error": "",
-   "seconds": 0.032
+   "seconds": 0.033
   },
   {
    "path": "malicious/pickle/subprocess-harmless.p5.pkl",
@@ -608,7 +614,7 @@
    "loaded": true,
    "sandbox": "",
    "error": "",
-   "seconds": 0.03
+   "seconds": 0.032
   },
   {
    "path": "malicious/pickle/cprofile-run.p0.pkl",
@@ -621,7 +627,7 @@
    "loaded": true,
    "sandbox": "",
    "error": "",
-   "seconds": 0.037
+   "seconds": 0.04
   },
   {
    "path": "malicious/pickle/cprofile-run.p2.pkl",
@@ -634,7 +640,7 @@
    "loaded": true,
    "sandbox": "",
    "error": "",
-   "seconds": 0.039
+   "seconds": 0.04
   },
   {
    "path": "malicious/pickle/cprofile-run.p4.pkl",
@@ -673,7 +679,7 @@
    "loaded": true,
    "sandbox": "",
    "error": "",
-   "seconds": 0.03
+   "seconds": 0.026
   },
   {
    "path": "malicious/pickle/nested-pickle-loads.p2.pkl",
@@ -699,7 +705,7 @@
    "loaded": true,
    "sandbox": "",
    "error": "",
-   "seconds": 0.027
+   "seconds": 0.028
   },
   {
    "path": "malicious/pickle/nested-pickle-loads.p5.pkl",
@@ -712,7 +718,7 @@
    "loaded": true,
    "sandbox": "",
    "error": "",
-   "seconds": 0.027
+   "seconds": 0.028
   },
   {
    "path": "malicious/pickle/memo-stack-global.pkl",
@@ -764,7 +770,7 @@
    "loaded": true,
    "sandbox": "",
    "error": "",
-   "seconds": 0.028
+   "seconds": 0.025
   },
   {
    "path": "malicious/pickle/newobj-partial.pkl",
@@ -777,7 +783,7 @@
    "loaded": true,
    "sandbox": "",
    "error": "",
-   "seconds": 0.027
+   "seconds": 0.028
   },
   {
    "path": "malicious/pickle/setstate-injection.pkl",
@@ -803,7 +809,7 @@
    "loaded": true,
    "sandbox": "",
    "error": "",
-   "seconds": 0.026
+   "seconds": 0.029
   },
   {
    "path": "malicious/pickle/marshal-function.pkl",
@@ -816,7 +822,7 @@
    "loaded": true,
    "sandbox": "",
    "error": "",
-   "seconds": 0.027
+   "seconds": 0.028
   },
   {
    "path": "malicious/pickle/build-monkeypatch.pkl",
@@ -842,7 +848,7 @@
    "loaded": false,
    "sandbox": "",
    "error": "ValueError: Unable to configure handler 'h'",
-   "seconds": 0.038
+   "seconds": 0.036
   },
   {
    "path": "malicious/pickle/hard-typing-forwardref.pkl",
@@ -868,7 +874,7 @@
    "loaded": true,
    "sandbox": "",
    "error": "",
-   "seconds": 0.044
+   "seconds": 0.043
   },
   {
    "path": "malicious/pickle/odd-extension.txt",
@@ -894,7 +900,7 @@
    "loaded": true,
    "sandbox": "",
    "error": "",
-   "seconds": 0.026
+   "seconds": 0.028
   },
   {
    "path": "malicious/pytorch/zip-data-pkl.pt",
@@ -907,7 +913,7 @@
    "loaded": true,
    "sandbox": "",
    "error": "",
-   "seconds": 1.043
+   "seconds": 1.432
   },
   {
    "path": "malicious/pytorch/pytorch_model.bin",
@@ -920,7 +926,7 @@
    "loaded": true,
    "sandbox": "",
    "error": "",
-   "seconds": 1.038
+   "seconds": 1.425
   },
   {
    "path": "malicious/pytorch/zip-local-name-mismatch.pt",
@@ -933,7 +939,7 @@
    "loaded": true,
    "sandbox": "",
    "error": "",
-   "seconds": 1.037
+   "seconds": 1.418
   },
   {
    "path": "malicious/pytorch/zip-encrypted-flag.pt",
@@ -946,7 +952,7 @@
    "loaded": true,
    "sandbox": "",
    "error": "",
-   "seconds": 0.98
+   "seconds": 0.945
   },
   {
    "path": "malicious/pytorch/legacy-main-pickle.pt",
@@ -959,7 +965,7 @@
    "loaded": true,
    "sandbox": "",
    "error": "",
-   "seconds": 0.982
+   "seconds": 0.945
   },
   {
    "path": "malicious/pytorch/legacy-sysinfo-pickle.pt",
@@ -972,7 +978,7 @@
    "loaded": true,
    "sandbox": "",
    "error": "",
-   "seconds": 0.981
+   "seconds": 0.945
   },
   {
    "path": "malicious/pytorch/nested-load-from-bytes.pt",
@@ -985,7 +991,7 @@
    "loaded": true,
    "sandbox": "",
    "error": "",
-   "seconds": 0.932
+   "seconds": 0.903
   },
   {
    "path": "malicious/numpy/object-array.npy",
@@ -998,7 +1004,7 @@
    "loaded": true,
    "sandbox": "",
    "error": "",
-   "seconds": 0.066
+   "seconds": 0.064
   },
   {
    "path": "malicious/numpy/object-array.npz",
@@ -1011,7 +1017,7 @@
    "loaded": true,
    "sandbox": "",
    "error": "",
-   "seconds": 0.072
+   "seconds": 0.074
   },
   {
    "path": "malicious/joblib/plain.joblib",
@@ -1024,7 +1030,7 @@
    "loaded": true,
    "sandbox": "",
    "error": "",
-   "seconds": 0.121
+   "seconds": 0.133
   },
   {
    "path": "malicious/joblib/after-raw-array.joblib",
@@ -1037,7 +1043,7 @@
    "loaded": true,
    "sandbox": "",
    "error": "",
-   "seconds": 0.12
+   "seconds": 0.125
   },
   {
    "path": "malicious/joblib/object-array.joblib",
@@ -1050,7 +1056,7 @@
    "loaded": true,
    "sandbox": "",
    "error": "",
-   "seconds": 0.122
+   "seconds": 0.118
   },
   {
    "path": "malicious/joblib/compressed-zlib.joblib",
@@ -1063,7 +1069,7 @@
    "loaded": true,
    "sandbox": "",
    "error": "",
-   "seconds": 0.122
+   "seconds": 0.12
   },
   {
    "path": "malicious/joblib/compressed-gzip.joblib",
@@ -1076,7 +1082,7 @@
    "loaded": true,
    "sandbox": "",
    "error": "",
-   "seconds": 0.122
+   "seconds": 0.124
   },
   {
    "path": "malicious/joblib/compressed-bz2.joblib",
@@ -1089,7 +1095,7 @@
    "loaded": true,
    "sandbox": "",
    "error": "",
-   "seconds": 0.121
+   "seconds": 0.124
   },
   {
    "path": "malicious/joblib/compressed-xz.joblib",
@@ -1102,7 +1108,7 @@
    "loaded": true,
    "sandbox": "",
    "error": "",
-   "seconds": 0.121
+   "seconds": 0.119
   },
   {
    "path": "malicious/joblib/compressed-lzma.joblib",
@@ -1115,7 +1121,7 @@
    "loaded": true,
    "sandbox": "",
    "error": "",
-   "seconds": 0.121
+   "seconds": 0.12
   },
   {
    "path": "malicious/keras/lambda.keras",
@@ -1128,7 +1134,7 @@
    "loaded": true,
    "sandbox": "",
    "error": "",
-   "seconds": 3.146
+   "seconds": 3.935
   },
   {
    "path": "malicious/keras/lambda.h5",
@@ -1141,7 +1147,7 @@
    "loaded": true,
    "sandbox": "",
    "error": "",
-   "seconds": 3.139
+   "seconds": 3.933
   },
   {
    "path": "malicious/gguf/template-cycler-globals.gguf",
@@ -1154,7 +1160,7 @@
    "loaded": true,
    "sandbox": "blocked",
    "error": "",
-   "seconds": 0.15
+   "seconds": 0.129
   },
   {
    "path": "malicious/gguf/template-subclasses-walk.gguf",
@@ -1167,7 +1173,7 @@
    "loaded": true,
    "sandbox": "blocked",
    "error": "",
-   "seconds": 0.128
+   "seconds": 0.116
   },
   {
    "path": "malicious/gguf/template-escaped-underscores.gguf",
@@ -1193,7 +1199,7 @@
    "loaded": true,
    "sandbox": "blocked",
    "error": "",
-   "seconds": 0.125
+   "seconds": 0.111
   },
   {
    "path": "malicious/gguf/template-joiner-globals.gguf",
@@ -1206,7 +1212,7 @@
    "loaded": true,
    "sandbox": "blocked",
    "error": "",
-   "seconds": 0.121
+   "seconds": 0.124
   },
   {
    "path": "malicious/gguf/template-named-tool-use.gguf",
@@ -1219,7 +1225,7 @@
    "loaded": true,
    "sandbox": "blocked",
    "error": "",
-   "seconds": 0.137
+   "seconds": 0.113
   },
   {
    "path": "malicious/safetensors/header-length-past-eof.safetensors",
@@ -1245,7 +1251,7 @@
    "loaded": false,
    "sandbox": "",
    "error": "safetensors._safetensors_rust.SafetensorError: Error while deserializing header: header too large",
-   "seconds": 0.07
+   "seconds": 0.067
   },
   {
    "path": "malicious/safetensors/overlapping-offsets.safetensors",
@@ -1258,7 +1264,7 @@
    "loaded": false,
    "sandbox": "",
    "error": "safetensors._safetensors_rust.SafetensorError: Error while deserializing header: invalid offset for tensor `b`",
-   "seconds": 0.073
+   "seconds": 0.072
   },
   {
    "path": "malicious/safetensors/offsets-past-eof.safetensors",
@@ -1271,7 +1277,7 @@
    "loaded": false,
    "sandbox": "",
    "error": "safetensors._safetensors_rust.SafetensorError: Error while deserializing header: incomplete metadata, file not fully covered",
-   "seconds": 0.077
+   "seconds": 0.069
   },
   {
    "path": "malicious/safetensors/size-mismatch.safetensors",
@@ -1284,7 +1290,7 @@
    "loaded": false,
    "sandbox": "",
    "error": "safetensors._safetensors_rust.SafetensorError: Error while deserializing header: invalid shape, data type, or offset for tensor",
-   "seconds": 0.073
+   "seconds": 0.068
   },
   {
    "path": "malicious/safetensors/invalid-json.safetensors",
@@ -1297,7 +1303,7 @@
    "loaded": false,
    "sandbox": "",
    "error": "safetensors._safetensors_rust.SafetensorError: Error while deserializing header: invalid JSON in header: EOF while parsing an object at line 1 column 59",
-   "seconds": 0.071
+   "seconds": 0.067
   },
   {
    "path": "malicious/safetensors/duplicate-key.safetensors",
@@ -1310,7 +1316,7 @@
    "loaded": false,
    "sandbox": "",
    "error": "safetensors._safetensors_rust.SafetensorError: Error while deserializing header: invalid offset for tensor `a`",
-   "seconds": 0.071
+   "seconds": 0.072
   },
   {
    "path": "malicious/safetensors/gap-between-tensors.safetensors",
@@ -1323,7 +1329,7 @@
    "loaded": false,
    "sandbox": "",
    "error": "safetensors._safetensors_rust.SafetensorError: Error while deserializing header: invalid offset for tensor `b`",
-   "seconds": 0.073
+   "seconds": 0.075
   },
   {
    "path": "malicious/hf-json/cycler-globals/tokenizer_config.json",
@@ -1336,7 +1342,7 @@
    "loaded": true,
    "sandbox": "blocked",
    "error": "",
-   "seconds": 0.058
+   "seconds": 0.06
   },
   {
    "path": "malicious/hf-json/subclasses-walk/tokenizer_config.json",
@@ -1349,7 +1355,7 @@
    "loaded": true,
    "sandbox": "blocked",
    "error": "",
-   "seconds": 0.057
+   "seconds": 0.056
   },
   {
    "path": "malicious/call-shape/stdlib-dis.pkl",
@@ -1362,7 +1368,7 @@
    "loaded": true,
    "sandbox": "",
    "error": "",
-   "seconds": 0.029
+   "seconds": 0.028
   },
   {
    "path": "malicious/call-shape/stdlib-pprint.pkl",
@@ -1375,7 +1381,7 @@
    "loaded": true,
    "sandbox": "",
    "error": "",
-   "seconds": 0.036
+   "seconds": 0.035
   },
   {
    "path": "malicious/call-shape/builtin-print.pkl",
@@ -1388,7 +1394,7 @@
    "loaded": true,
    "sandbox": "",
    "error": "",
-   "seconds": 0.027
+   "seconds": 0.026
   },
   {
    "path": "malicious/call-shape/library-exec-wrapper.pkl",
@@ -1401,7 +1407,7 @@
    "loaded": true,
    "sandbox": "",
    "error": "",
-   "seconds": 1.174
+   "seconds": 1.052
   },
   {
    "path": "malicious/call-shape/method-path.pkl",
@@ -1414,7 +1420,7 @@
    "loaded": true,
    "sandbox": "",
    "error": "",
-   "seconds": 0.038
+   "seconds": 0.036
   },
   {
    "path": "benign/pytorch/mlp.state_dict.pt",
@@ -1427,7 +1433,7 @@
    "loaded": true,
    "sandbox": "",
    "error": "",
-   "seconds": 0.957
+   "seconds": 1.004
   },
   {
    "path": "benign/pytorch/mlp.whole.pt",
@@ -1440,7 +1446,7 @@
    "loaded": true,
    "sandbox": "",
    "error": "",
-   "seconds": 0.955
+   "seconds": 0.945
   },
   {
    "path": "benign/pytorch/mlp.legacy.pt",
@@ -1453,7 +1459,7 @@
    "loaded": true,
    "sandbox": "",
    "error": "",
-   "seconds": 0.946
+   "seconds": 0.933
   },
   {
    "path": "benign/pytorch/mlp.half.bin",
@@ -1466,7 +1472,7 @@
    "loaded": true,
    "sandbox": "",
    "error": "",
-   "seconds": 0.956
+   "seconds": 0.935
   },
   {
    "path": "benign/safetensors/mlp.safetensors",
@@ -1479,7 +1485,7 @@
    "loaded": true,
    "sandbox": "",
    "error": "",
-   "seconds": 0.067
+   "seconds": 0.069
   },
   {
    "path": "benign/pytorch/mlp.checkpoint.ckpt",
@@ -1492,7 +1498,7 @@
    "loaded": true,
    "sandbox": "",
    "error": "",
-   "seconds": 0.953
+   "seconds": 0.956
   },
   {
    "path": "benign/pytorch/cnn.state_dict.pt",
@@ -1505,7 +1511,7 @@
    "loaded": true,
    "sandbox": "",
    "error": "",
-   "seconds": 0.946
+   "seconds": 0.959
   },
   {
    "path": "benign/pytorch/cnn.whole.pt",
@@ -1518,7 +1524,7 @@
    "loaded": true,
    "sandbox": "",
    "error": "",
-   "seconds": 0.958
+   "seconds": 0.936
   },
   {
    "path": "benign/pytorch/cnn.legacy.pt",
@@ -1531,7 +1537,7 @@
    "loaded": true,
    "sandbox": "",
    "error": "",
-   "seconds": 0.953
+   "seconds": 0.95
   },
   {
    "path": "benign/pytorch/cnn.half.bin",
@@ -1544,7 +1550,7 @@
    "loaded": true,
    "sandbox": "",
    "error": "",
-   "seconds": 0.954
+   "seconds": 0.946
   },
   {
    "path": "benign/safetensors/cnn.safetensors",
@@ -1570,7 +1576,7 @@
    "loaded": true,
    "sandbox": "",
    "error": "",
-   "seconds": 0.966
+   "seconds": 0.933
   },
   {
    "path": "benign/pytorch/rnn.state_dict.pt",
@@ -1583,7 +1589,7 @@
    "loaded": true,
    "sandbox": "",
    "error": "",
-   "seconds": 0.957
+   "seconds": 0.944
   },
   {
    "path": "benign/pytorch/rnn.whole.pt",
@@ -1596,7 +1602,7 @@
    "loaded": true,
    "sandbox": "",
    "error": "",
-   "seconds": 0.958
+   "seconds": 0.943
   },
   {
    "path": "benign/pytorch/rnn.legacy.pt",
@@ -1609,7 +1615,7 @@
    "loaded": true,
    "sandbox": "",
    "error": "",
-   "seconds": 0.943
+   "seconds": 0.927
   },
   {
    "path": "benign/pytorch/rnn.half.bin",
@@ -1622,7 +1628,7 @@
    "loaded": true,
    "sandbox": "",
    "error": "",
-   "seconds": 0.958
+   "seconds": 0.933
   },
   {
    "path": "benign/safetensors/rnn.safetensors",
@@ -1635,7 +1641,7 @@
    "loaded": true,
    "sandbox": "",
    "error": "",
-   "seconds": 0.069
+   "seconds": 0.071
   },
   {
    "path": "benign/pytorch/rnn.checkpoint.ckpt",
@@ -1648,7 +1654,7 @@
    "loaded": true,
    "sandbox": "",
    "error": "",
-   "seconds": 0.942
+   "seconds": 0.941
   },
   {
    "path": "benign/pytorch/transformer.state_dict.pt",
@@ -1661,7 +1667,7 @@
    "loaded": true,
    "sandbox": "",
    "error": "",
-   "seconds": 0.977
+   "seconds": 0.942
   },
   {
    "path": "benign/pytorch/transformer.whole.pt",
@@ -1674,7 +1680,7 @@
    "loaded": true,
    "sandbox": "",
    "error": "",
-   "seconds": 0.966
+   "seconds": 0.939
   },
   {
    "path": "benign/pytorch/transformer.legacy.pt",
@@ -1687,7 +1693,7 @@
    "loaded": true,
    "sandbox": "",
    "error": "",
-   "seconds": 0.96
+   "seconds": 0.953
   },
   {
    "path": "benign/pytorch/transformer.half.bin",
@@ -1700,7 +1706,7 @@
    "loaded": true,
    "sandbox": "",
    "error": "",
-   "seconds": 0.941
+   "seconds": 0.945
   },
   {
    "path": "benign/safetensors/transformer.safetensors",
@@ -1713,7 +1719,7 @@
    "loaded": true,
    "sandbox": "",
    "error": "",
-   "seconds": 0.08
+   "seconds": 0.084
   },
   {
    "path": "benign/pytorch/transformer.checkpoint.ckpt",
@@ -1726,7 +1732,7 @@
    "loaded": true,
    "sandbox": "",
    "error": "",
-   "seconds": 0.942
+   "seconds": 0.895
   },
   {
    "path": "benign/joblib/logreg.raw.joblib",
@@ -1739,7 +1745,7 @@
    "loaded": true,
    "sandbox": "",
    "error": "",
-   "seconds": 0.945
+   "seconds": 0.961
   },
   {
    "path": "benign/joblib/logreg.zlib.joblib",
@@ -1752,7 +1758,7 @@
    "loaded": true,
    "sandbox": "",
    "error": "",
-   "seconds": 0.907
+   "seconds": 0.958
   },
   {
    "path": "benign/joblib/logreg.gzip.joblib",
@@ -1765,7 +1771,7 @@
    "loaded": true,
    "sandbox": "",
    "error": "",
-   "seconds": 0.915
+   "seconds": 0.91
   },
   {
    "path": "benign/joblib/logreg.bz2.joblib",
@@ -1778,7 +1784,7 @@
    "loaded": true,
    "sandbox": "",
    "error": "",
-   "seconds": 0.915
+   "seconds": 0.902
   },
   {
    "path": "benign/joblib/logreg.xz.joblib",
@@ -1791,7 +1797,7 @@
    "loaded": true,
    "sandbox": "",
    "error": "",
-   "seconds": 0.91
+   "seconds": 0.9
   },
   {
    "path": "benign/joblib/logreg.lzma.joblib",
@@ -1804,7 +1810,7 @@
    "loaded": true,
    "sandbox": "",
    "error": "",
-   "seconds": 0.91
+   "seconds": 0.892
   },
   {
    "path": "benign/pickle/logreg.pkl",
@@ -1817,7 +1823,7 @@
    "loaded": true,
    "sandbox": "",
    "error": "",
-   "seconds": 0.921
+   "seconds": 0.895
   },
   {
    "path": "benign/joblib/forest.raw.joblib",
@@ -1843,7 +1849,7 @@
    "loaded": true,
    "sandbox": "",
    "error": "",
-   "seconds": 0.993
+   "seconds": 0.978
   },
   {
    "path": "benign/joblib/forest.gzip.joblib",
@@ -1856,7 +1862,7 @@
    "loaded": true,
    "sandbox": "",
    "error": "",
-   "seconds": 0.993
+   "seconds": 0.968
   },
   {
    "path": "benign/joblib/forest.bz2.joblib",
@@ -1869,7 +1875,7 @@
    "loaded": true,
    "sandbox": "",
    "error": "",
-   "seconds": 0.988
+   "seconds": 0.969
   },
   {
    "path": "benign/joblib/forest.xz.joblib",
@@ -1882,7 +1888,7 @@
    "loaded": true,
    "sandbox": "",
    "error": "",
-   "seconds": 0.995
+   "seconds": 0.984
   },
   {
    "path": "benign/joblib/forest.lzma.joblib",
@@ -1895,7 +1901,7 @@
    "loaded": true,
    "sandbox": "",
    "error": "",
-   "seconds": 0.99
+   "seconds": 0.981
   },
   {
    "path": "benign/pickle/forest.pkl",
@@ -1908,7 +1914,7 @@
    "loaded": true,
    "sandbox": "",
    "error": "",
-   "seconds": 1.002
+   "seconds": 0.978
   },
   {
    "path": "benign/joblib/gbm.raw.joblib",
@@ -1921,7 +1927,7 @@
    "loaded": true,
    "sandbox": "",
    "error": "",
-   "seconds": 1.002
+   "seconds": 0.984
   },
   {
    "path": "benign/joblib/gbm.zlib.joblib",
@@ -1934,7 +1940,7 @@
    "loaded": true,
    "sandbox": "",
    "error": "",
-   "seconds": 0.998
+   "seconds": 0.981
   },
   {
    "path": "benign/joblib/gbm.gzip.joblib",
@@ -1947,7 +1953,7 @@
    "loaded": true,
    "sandbox": "",
    "error": "",
-   "seconds": 0.988
+   "seconds": 0.969
   },
   {
    "path": "benign/joblib/gbm.bz2.joblib",
@@ -1960,7 +1966,7 @@
    "loaded": true,
    "sandbox": "",
    "error": "",
-   "seconds": 0.993
+   "seconds": 0.994
   },
   {
    "path": "benign/joblib/gbm.xz.joblib",
@@ -1973,7 +1979,7 @@
    "loaded": true,
    "sandbox": "",
    "error": "",
-   "seconds": 0.995
+   "seconds": 0.982
   },
   {
    "path": "benign/joblib/gbm.lzma.joblib",
@@ -1986,7 +1992,7 @@
    "loaded": true,
    "sandbox": "",
    "error": "",
-   "seconds": 1.005
+   "seconds": 0.984
   },
   {
    "path": "benign/pickle/gbm.pkl",
@@ -1999,7 +2005,7 @@
    "loaded": true,
    "sandbox": "",
    "error": "",
-   "seconds": 0.996
+   "seconds": 1.0
   },
   {
    "path": "benign/joblib/pipeline.raw.joblib",
@@ -2025,7 +2031,7 @@
    "loaded": true,
    "sandbox": "",
    "error": "",
-   "seconds": 0.917
+   "seconds": 0.907
   },
   {
    "path": "benign/joblib/pipeline.gzip.joblib",
@@ -2038,7 +2044,7 @@
    "loaded": true,
    "sandbox": "",
    "error": "",
-   "seconds": 0.927
+   "seconds": 0.937
   },
   {
    "path": "benign/joblib/pipeline.bz2.joblib",
@@ -2051,7 +2057,7 @@
    "loaded": true,
    "sandbox": "",
    "error": "",
-   "seconds": 0.924
+   "seconds": 0.931
   },
   {
    "path": "benign/joblib/pipeline.xz.joblib",
@@ -2064,7 +2070,7 @@
    "loaded": true,
    "sandbox": "",
    "error": "",
-   "seconds": 0.922
+   "seconds": 0.936
   },
   {
    "path": "benign/joblib/pipeline.lzma.joblib",
@@ -2077,7 +2083,7 @@
    "loaded": true,
    "sandbox": "",
    "error": "",
-   "seconds": 0.917
+   "seconds": 0.963
   },
   {
    "path": "benign/pickle/pipeline.pkl",
@@ -2090,7 +2096,7 @@
    "loaded": true,
    "sandbox": "",
    "error": "",
-   "seconds": 0.904
+   "seconds": 0.927
   },
   {
    "path": "benign/pickle/plain.p0.pkl",
@@ -2103,7 +2109,7 @@
    "loaded": true,
    "sandbox": "",
    "error": "",
-   "seconds": 0.082
+   "seconds": 0.073
   },
   {
    "path": "benign/pickle/plain.p1.pkl",
@@ -2116,7 +2122,7 @@
    "loaded": true,
    "sandbox": "",
    "error": "",
-   "seconds": 0.079
+   "seconds": 0.076
   },
   {
    "path": "benign/pickle/plain.p2.pkl",
@@ -2129,7 +2135,7 @@
    "loaded": true,
    "sandbox": "",
    "error": "",
-   "seconds": 0.075
+   "seconds": 0.08
   },
   {
    "path": "benign/pickle/plain.p3.pkl",
@@ -2142,7 +2148,7 @@
    "loaded": true,
    "sandbox": "",
    "error": "",
-   "seconds": 0.075
+   "seconds": 0.071
   },
   {
    "path": "benign/pickle/plain.p4.pkl",
@@ -2155,7 +2161,7 @@
    "loaded": true,
    "sandbox": "",
    "error": "",
-   "seconds": 0.07
+   "seconds": 0.069
   },
   {
    "path": "benign/pickle/plain.p5.pkl",
@@ -2168,7 +2174,7 @@
    "loaded": true,
    "sandbox": "",
    "error": "",
-   "seconds": 0.071
+   "seconds": 0.068
   },
   {
    "path": "benign/numpy/f32.npy",
@@ -2181,7 +2187,7 @@
    "loaded": true,
    "sandbox": "",
    "error": "",
-   "seconds": 0.071
+   "seconds": 0.064
   },
   {
    "path": "benign/numpy/i64.npy",
@@ -2194,7 +2200,7 @@
    "loaded": true,
    "sandbox": "",
    "error": "",
-   "seconds": 0.068
+   "seconds": 0.067
   },
   {
    "path": "benign/numpy/bool.npy",
@@ -2207,7 +2213,7 @@
    "loaded": true,
    "sandbox": "",
    "error": "",
-   "seconds": 0.067
+   "seconds": 0.066
   },
   {
    "path": "benign/numpy/u.npy",
@@ -2220,7 +2226,7 @@
    "loaded": true,
    "sandbox": "",
    "error": "",
-   "seconds": 0.068
+   "seconds": 0.067
   },
   {
    "path": "benign/numpy/dt.npy",
@@ -2233,7 +2239,7 @@
    "loaded": true,
    "sandbox": "",
    "error": "",
-   "seconds": 0.068
+   "seconds": 0.066
   },
   {
    "path": "benign/numpy/arrays.npz",
@@ -2246,7 +2252,7 @@
    "loaded": true,
    "sandbox": "",
    "error": "",
-   "seconds": 0.076
+   "seconds": 0.089
   },
   {
    "path": "benign/keras/dense.keras",
@@ -2259,7 +2265,7 @@
    "loaded": true,
    "sandbox": "",
    "error": "",
-   "seconds": 3.282
+   "seconds": 2.957
   },
   {
    "path": "benign/keras/dense.h5",
@@ -2272,7 +2278,7 @@
    "loaded": true,
    "sandbox": "",
    "error": "",
-   "seconds": 3.245
+   "seconds": 2.93
   },
   {
    "path": "benign/gguf/chatml.gguf",
@@ -2298,7 +2304,7 @@
    "loaded": true,
    "sandbox": "rendered",
    "error": "",
-   "seconds": 0.058
+   "seconds": 0.057
   },
   {
    "path": "benign/gguf/llama2.gguf",
@@ -2311,7 +2317,7 @@
    "loaded": true,
    "sandbox": "rendered",
    "error": "",
-   "seconds": 0.122
+   "seconds": 0.125
   },
   {
    "path": "benign/hf-json/llama2/tokenizer_config.json",
@@ -2337,7 +2343,7 @@
    "loaded": true,
    "sandbox": "rendered",
    "error": "",
-   "seconds": 0.121
+   "seconds": 0.113
   },
   {
    "path": "benign/hf-json/tools/tokenizer_config.json",
@@ -2350,7 +2356,7 @@
    "loaded": true,
    "sandbox": "rendered",
    "error": "",
-   "seconds": 0.065
+   "seconds": 0.058
   }
  ]
 }

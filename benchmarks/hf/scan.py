@@ -54,6 +54,11 @@ def main() -> None:
         action="store_true",
         help="rescan with msscan only and keep the other tools' stored verdicts for the same files",
     )
+    ap.add_argument(
+        "--rerun",
+        default="",
+        help="with --reuse-others: tools to run again anyway (comma separated)",
+    )
     args = ap.parse_args()
     priv = args.data / "private"
     salt = (priv / "salt").read_text().strip()
@@ -134,7 +139,8 @@ def main() -> None:
             for tool in tool_meta:
                 rows[i][tool] = old_rows[fid][tool]
                 private_rows[i][tool] = old_priv[fid][tool]
-    for tool in [] if args.reuse_others else args.tools.split(","):
+    again = [t for t in args.rerun.split(",") if t]
+    for tool in again if args.reuse_others else args.tools.split(","):
         res = run_tool(tool, [p for _, p in others], work / f"hf-{tool}.txt")
         wall = res.pop("__wall__")["seconds"]
         tool_meta[tool] = {"wall_seconds": round(wall, 1), "files": len(others)}

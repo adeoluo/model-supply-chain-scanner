@@ -1,0 +1,144 @@
+{
+ "summary": {
+  "checked_on": "2026-11-23",
+  "payload_files": 5,
+  "repositories": 4,
+  "hub_status": {
+   "unsafe": 2,
+   "queued": 2,
+   "safe": 1
+  },
+  "flagged_by_the_hub": 2,
+  "not_flagged_by_the_hub": 3,
+  "in_repositories_presenting_as_security_tests": 3,
+  "neither_flagged_nor_a_declared_test": 0,
+  "other_high_alerts": {
+   "files": 1,
+   "by_label": {
+    "code-by-design": 1
+   },
+   "flagged_by_the_hub": 0,
+   "in_repositories_presenting_as_security_tests": 0,
+   "in_repositories_that_also_hold_a_payload_file": 0
+  },
+  "note": "A discovery would be a payload file that the Hub does not flag and that is not in a repository presenting itself as a security test. Statuses are a snapshot of the main branch on the day of the check; files were matched by path, not by hash, and queued scans may finish later."
+ },
+ "rows": [
+  {
+   "id": "f3de0f440404e",
+   "repository": 1,
+   "label": "payload",
+   "basis": "nt.system",
+   "msscan": "high",
+   "hub_status": "unsafe",
+   "hub_scanners": {
+    "protectAiScan": "unscanned",
+    "jFrogScan": "unsafe",
+    "pickleImportScan": "unsafe",
+    "avScan": "suspicious",
+    "virusTotalScan": "unscanned"
+   },
+   "hub_flags_it": true,
+   "presents_as_security_test": false,
+   "presents_as_security_test_by": []
+  },
+  {
+   "id": "f2bbb752b53d3",
+   "repository": 1,
+   "label": "payload",
+   "basis": "nt.system",
+   "msscan": "high",
+   "hub_status": "unsafe",
+   "hub_scanners": {
+    "protectAiScan": "unscanned",
+    "jFrogScan": "unsafe",
+    "pickleImportScan": "unsafe",
+    "avScan": "safe",
+    "virusTotalScan": "safe"
+   },
+   "hub_flags_it": true,
+   "presents_as_security_test": false,
+   "presents_as_security_test_by": []
+  },
+  {
+   "id": "f8c507a37a2f5",
+   "repository": 2,
+   "label": "payload",
+   "basis": "builtins.eval",
+   "msscan": "high",
+   "hub_status": "queued",
+   "hub_scanners": {
+    "protectAiScan": "safe",
+    "jFrogScan": "safe",
+    "pickleImportScan": "safe",
+    "avScan": "safe",
+    "virusTotalScan": "queued"
+   },
+   "hub_flags_it": false,
+   "presents_as_security_test": true,
+   "presents_as_security_test_by": [
+    "by_owner"
+   ]
+  },
+  {
+   "id": "f2e955ce3211d",
+   "repository": 3,
+   "label": "payload",
+   "basis": "MS506",
+   "msscan": "high",
+   "hub_status": "safe",
+   "hub_scanners": {
+    "protectAiScan": "unscanned",
+    "jFrogScan": "safe",
+    "pickleImportScan": "unscanned",
+    "avScan": "safe",
+    "virusTotalScan": "unscanned"
+   },
+   "hub_flags_it": false,
+   "presents_as_security_test": true,
+   "presents_as_security_test_by": [
+    "by_name",
+    "by_model_card",
+    "by_owner"
+   ]
+  },
+  {
+   "id": "fa34b3388d967",
+   "repository": 4,
+   "label": "payload",
+   "basis": "MS206",
+   "msscan": "high",
+   "hub_status": "queued",
+   "hub_scanners": {
+    "protectAiScan": "unscanned",
+    "jFrogScan": "queued",
+    "pickleImportScan": "unscanned",
+    "avScan": "safe",
+    "virusTotalScan": "unscanned"
+   },
+   "hub_flags_it": false,
+   "presents_as_security_test": true,
+   "presents_as_security_test_by": [
+    "by_owner"
+   ]
+  },
+  {
+   "id": "ff578f001d275",
+   "repository": 5,
+   "label": "code-by-design",
+   "basis": "calls into 4 module(s) outside the known libraries",
+   "msscan": "high",
+   "hub_status": "caution",
+   "hub_scanners": {
+    "protectAiScan": "unscanned",
+    "jFrogScan": "safe",
+    "pickleImportScan": "caution",
+    "avScan": "safe",
+    "virusTotalScan": "safe"
+   },
+   "hub_flags_it": false,
+   "presents_as_security_test": false,
+   "presents_as_security_test_by": []
+  }
+ ]
+}

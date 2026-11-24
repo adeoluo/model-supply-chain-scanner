@@ -3,207 +3,246 @@
   "file": "opus-mt-en-de-pytorch_model.bin",
   "size_mb": 284.1,
   "tool": "msscan",
-  "wall_s": 0.01,
-  "peak_rss_mb": 3.6,
-  "runs": [
-   0.26,
-   0.01,
-   0.01
-  ],
-  "status": "ok"
- },
- {
-  "file": "opus-mt-en-de-pytorch_model.bin",
-  "size_mb": 284.1,
-  "tool": "picklescan",
-  "wall_s": 0.19,
-  "peak_rss_mb": 25.4,
-  "runs": [
-   0.19,
-   0.2,
-   0.16
-  ],
-  "status": "ok"
- },
- {
-  "file": "opus-mt-en-de-pytorch_model.bin",
-  "size_mb": 284.1,
-  "tool": "modelscan",
-  "wall_s": 0.25,
-  "peak_rss_mb": 40.0,
-  "runs": [
-   2.0,
-   0.25,
-   0.24
-  ],
-  "status": "ok"
- },
- {
-  "file": "opus-mt-en-de-pytorch_model.bin",
-  "size_mb": 284.1,
-  "tool": "fickling",
-  "wall_s": 2.52,
-  "peak_rss_mb": 318.2,
-  "runs": [
-   3.93,
-   2.52,
-   2.39
-  ],
-  "status": "ok"
- },
- {
-  "file": "opus-mt-en-de-pytorch_model.bin",
-  "size_mb": 284.1,
-  "tool": "msscan-python",
-  "wall_s": 0.06,
-  "peak_rss_mb": 21.0,
-  "runs": [
-   0.55,
-   0.06,
-   0.06
-  ],
-  "status": "ok"
- },
- {
-  "file": "opus-mt-en-fr-pytorch_model.bin",
-  "size_mb": 286.9,
-  "tool": "msscan",
   "wall_s": 0.0,
-  "peak_rss_mb": 3.6,
+  "peak_rss_mb": 3.8,
   "runs": [
-   0.01,
+   0.08,
    0.0,
    0.0
   ],
   "status": "ok"
  },
  {
-  "file": "opus-mt-en-fr-pytorch_model.bin",
-  "size_mb": 286.9,
+  "file": "opus-mt-en-de-pytorch_model.bin",
+  "size_mb": 284.1,
   "tool": "picklescan",
-  "wall_s": 0.08,
-  "peak_rss_mb": 25.5,
-  "runs": [
-   0.08,
-   0.08,
-   0.08
-  ],
-  "status": "ok"
- },
- {
-  "file": "opus-mt-en-fr-pytorch_model.bin",
-  "size_mb": 286.9,
-  "tool": "modelscan",
-  "wall_s": 0.17,
-  "peak_rss_mb": 39.9,
-  "runs": [
-   0.26,
-   0.16,
-   0.17
-  ],
-  "status": "ok"
- },
- {
-  "file": "opus-mt-en-fr-pytorch_model.bin",
-  "size_mb": 286.9,
-  "tool": "fickling",
-  "wall_s": 2.32,
-  "peak_rss_mb": 297.4,
-  "runs": [
-   2.32,
-   2.33,
-   2.07
-  ],
-  "status": "ok"
- },
- {
-  "file": "opus-mt-en-fr-pytorch_model.bin",
-  "size_mb": 286.9,
-  "tool": "msscan-python",
   "wall_s": 0.06,
-  "peak_rss_mb": 20.9,
+  "peak_rss_mb": 25.7,
   "runs": [
+   0.06,
+   0.06,
+   0.06
+  ],
+  "status": "ok"
+ },
+ {
+  "file": "opus-mt-en-de-pytorch_model.bin",
+  "size_mb": 284.1,
+  "tool": "modelscan",
+  "wall_s": 0.1,
+  "peak_rss_mb": 40.2,
+  "runs": [
+   0.18,
    0.1,
-   0.06,
-   0.06
+   0.1
   ],
   "status": "ok"
  },
  {
-  "file": "qwen3.5-0.8b-model.safetensors",
-  "size_mb": 1666.0,
-  "tool": "msscan",
-  "wall_s": 0.0,
-  "peak_rss_mb": 3.7,
-  "runs": [
-   0.01,
-   0.0,
-   0.0
-  ],
-  "status": "ok"
- },
- {
-  "file": "qwen3.5-0.8b-model.safetensors",
-  "size_mb": 1666.0,
-  "tool": "picklescan",
-  "wall_s": 0.08,
-  "peak_rss_mb": 24.2,
-  "runs": [
-   0.09,
-   0.08,
-   0.07
-  ],
-  "status": "ok"
- },
- {
-  "file": "qwen3.5-0.8b-model.safetensors",
-  "size_mb": 1666.0,
-  "tool": "modelscan",
-  "wall_s": 0.16,
-  "peak_rss_mb": 39.9,
-  "runs": [
-   0.21,
-   0.16,
-   0.16
-  ],
-  "status": "ok"
- },
- {
-  "file": "qwen3.5-0.8b-model.safetensors",
-  "size_mb": 1666.0,
+  "file": "opus-mt-en-de-pytorch_model.bin",
+  "size_mb": 284.1,
   "tool": "fickling",
-  "wall_s": 3.86,
-  "peak_rss_mb": 504.4,
+  "wall_s": 1.01,
+  "peak_rss_mb": 494.2,
   "runs": [
-   3.56,
-   4.75,
-   3.86
+   1.61,
+   0.94,
+   1.01
   ],
   "status": "ok"
  },
  {
-  "file": "qwen3.5-0.8b-model.safetensors",
-  "size_mb": 1666.0,
+  "file": "opus-mt-en-de-pytorch_model.bin",
+  "size_mb": 284.1,
+  "tool": "modelaudit",
+  "wall_s": 3.23,
+  "peak_rss_mb": 178.2,
+  "runs": [
+   3.91,
+   3.21,
+   3.23
+  ],
+  "status": "ok"
+ },
+ {
+  "file": "opus-mt-en-de-pytorch_model.bin",
+  "size_mb": 284.1,
   "tool": "msscan-python",
-  "wall_s": 0.05,
+  "wall_s": 0.04,
   "peak_rss_mb": 21.3,
   "runs": [
-   0.25,
+   0.04,
+   0.04,
+   0.04
+  ],
+  "status": "ok"
+ },
+ {
+  "file": "opus-mt-en-fr-pytorch_model.bin",
+  "size_mb": 286.9,
+  "tool": "msscan",
+  "wall_s": 0.0,
+  "peak_rss_mb": 3.9,
+  "runs": [
+   0.0,
+   0.0,
+   0.0
+  ],
+  "status": "ok"
+ },
+ {
+  "file": "opus-mt-en-fr-pytorch_model.bin",
+  "size_mb": 286.9,
+  "tool": "picklescan",
+  "wall_s": 0.06,
+  "peak_rss_mb": 25.7,
+  "runs": [
+   0.06,
+   0.06,
+   0.05
+  ],
+  "status": "ok"
+ },
+ {
+  "file": "opus-mt-en-fr-pytorch_model.bin",
+  "size_mb": 286.9,
+  "tool": "modelscan",
+  "wall_s": 0.1,
+  "peak_rss_mb": 40.2,
+  "runs": [
+   0.1,
+   0.1,
+   0.1
+  ],
+  "status": "ok"
+ },
+ {
+  "file": "opus-mt-en-fr-pytorch_model.bin",
+  "size_mb": 286.9,
+  "tool": "fickling",
+  "wall_s": 0.95,
+  "peak_rss_mb": 496.7,
+  "runs": [
+   1.14,
+   0.95,
+   0.94
+  ],
+  "status": "ok"
+ },
+ {
+  "file": "opus-mt-en-fr-pytorch_model.bin",
+  "size_mb": 286.9,
+  "tool": "modelaudit",
+  "wall_s": 3.3,
+  "peak_rss_mb": 185.1,
+  "runs": [
+   3.29,
+   3.3,
+   3.37
+  ],
+  "status": "ok"
+ },
+ {
+  "file": "opus-mt-en-fr-pytorch_model.bin",
+  "size_mb": 286.9,
+  "tool": "msscan-python",
+  "wall_s": 0.04,
+  "peak_rss_mb": 21.3,
+  "runs": [
+   0.03,
+   0.04,
+   0.04
+  ],
+  "status": "ok"
+ },
+ {
+  "file": "qwen3.5-0.8b-model.safetensors",
+  "size_mb": 1666.0,
+  "tool": "msscan",
+  "wall_s": 0.0,
+  "peak_rss_mb": 3.8,
+  "runs": [
+   0.0,
+   0.0,
+   0.0
+  ],
+  "status": "ok"
+ },
+ {
+  "file": "qwen3.5-0.8b-model.safetensors",
+  "size_mb": 1666.0,
+  "tool": "picklescan",
+  "wall_s": 0.05,
+  "peak_rss_mb": 24.4,
+  "runs": [
+   0.05,
    0.05,
    0.05
   ],
   "status": "ok"
  },
  {
+  "file": "qwen3.5-0.8b-model.safetensors",
+  "size_mb": 1666.0,
+  "tool": "modelscan",
+  "wall_s": 0.1,
+  "peak_rss_mb": 40.2,
+  "runs": [
+   0.11,
+   0.1,
+   0.1
+  ],
+  "status": "ok"
+ },
+ {
+  "file": "qwen3.5-0.8b-model.safetensors",
+  "size_mb": 1666.0,
+  "tool": "fickling",
+  "wall_s": 2.09,
+  "peak_rss_mb": 1046.1,
+  "runs": [
+   1.86,
+   2.31,
+   2.09
+  ],
+  "status": "ok"
+ },
+ {
+  "file": "qwen3.5-0.8b-model.safetensors",
+  "size_mb": 1666.0,
+  "tool": "modelaudit",
+  "wall_s": 6.84,
+  "peak_rss_mb": 107.2,
+  "runs": [
+   7.13,
+   6.84,
+   6.7
+  ],
+  "status": "ok"
+ },
+ {
+  "file": "qwen3.5-0.8b-model.safetensors",
+  "size_mb": 1666.0,
+  "tool": "msscan-python",
+  "wall_s": 0.03,
+  "peak_rss_mb": 21.6,
+  "runs": [
+   0.04,
+   0.03,
+   0.03
+  ],
+  "status": "ok"
+ },
+ {
   "file": "plain-data.pkl",
   "size_mb": 31.3,
   "tool": "msscan",
-  "wall_s": 0.24,
+  "wall_s": 0.16,
   "peak_rss_mb": 240.8,
   "runs": [
-   0.31,
    0.24,
-   0.24
+   0.16,
+   0.16
   ],
   "status": "ok"
  },
@@ -211,12 +250,12 @@
   "file": "plain-data.pkl",
   "size_mb": 31.3,
   "tool": "picklescan",
-  "wall_s": 10.88,
-  "peak_rss_mb": 896.4,
+  "wall_s": 6.05,
+  "peak_rss_mb": 899.5,
   "runs": [
-   10.88,
-   11.1,
-   10.79
+   6.19,
+   5.99,
+   6.05
   ],
   "status": "ok"
  },
@@ -224,12 +263,12 @@
   "file": "plain-data.pkl",
   "size_mb": 31.3,
   "tool": "modelscan",
-  "wall_s": 11.79,
-  "peak_rss_mb": 728.1,
+  "wall_s": 6.06,
+  "peak_rss_mb": 915.3,
   "runs": [
-   12.05,
-   11.79,
-   11.46
+   6.06,
+   6.09,
+   6.0
   ],
   "status": "ok"
  },
@@ -237,12 +276,25 @@
   "file": "plain-data.pkl",
   "size_mb": 31.3,
   "tool": "fickling",
-  "wall_s": 103.43,
-  "peak_rss_mb": 712.8,
+  "wall_s": 37.34,
+  "peak_rss_mb": 1605.3,
   "runs": [
-   109.54,
-   103.43,
-   98.77
+   37.14,
+   37.34,
+   37.4
+  ],
+  "status": "ok"
+ },
+ {
+  "file": "plain-data.pkl",
+  "size_mb": 31.3,
+  "tool": "modelaudit",
+  "wall_s": 16.2,
+  "peak_rss_mb": 1105.5,
+  "runs": [
+   16.53,
+   16.02,
+   16.2
   ],
   "status": "ok"
  },
@@ -250,12 +302,12 @@
   "file": "plain-data.pkl",
   "size_mb": 31.3,
   "tool": "msscan-python",
-  "wall_s": 0.42,
-  "peak_rss_mb": 258.0,
+  "wall_s": 0.18,
+  "peak_rss_mb": 258.3,
   "runs": [
-   0.51,
-   0.42,
-   0.36
+   0.19,
+   0.18,
+   0.18
   ],
   "status": "ok"
  }

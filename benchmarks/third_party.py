@@ -133,6 +133,12 @@ def modelaudit_items(root: Path) -> list[tuple[Path, str, str]]:
             label = "benign"
         else:
             continue
+        if rel.startswith("samples/jinja2/") and rel.endswith(".json"):
+            # ModelAudit reads a chat template only from a file named like a tokenizer config,
+            # and its own tests copy these fixtures under that name before scanning them
+            # (tests/scanners/test_jinja2_template_scanner.py). Do the same, so it is scored on
+            # its fixtures the way its authors score it.
+            rel = f"huggingface/{p.parent.name}/{p.stem}/tokenizer_config.json"
         items.append((p, label, rel))
     return items
 

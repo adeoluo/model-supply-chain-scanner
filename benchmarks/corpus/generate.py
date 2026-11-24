@@ -1370,6 +1370,140 @@ def gen_second_wave(c: Corpus) -> None:
         "macos-metadata-file",
     )
 
+    # Shapes met in the held-out Hub sample. The benign ones were false alarms there.
+    import joblib
+    import torch
+    from sklearn.preprocessing import FunctionTransformer
+    from sklearn.utils.validation import check_array
+
+    buf = io.BytesIO()
+    joblib.dump(FunctionTransformer(func=functools.partial(check_array, accept_sparse=True)), buf)
+    ben("function-transformer-partial.joblib", buf.getvalue(), "joblib", "partial-library-function")
+    ben(
+        "methodcaller-floordiv.pkl",
+        pickle.dumps(operator.methodcaller("__floordiv__", 3600), protocol=4),
+        "pickle",
+        "methodcaller-operator-method",
+    )
+    ben(
+        "hparams-partial-optimizer.ckpt",
+        torch_save(
+            {"hyper_parameters": {"optimizer": functools.partial(torch.optim.Adam, lr=1e-3)}}
+        ),
+        "pytorch",
+        "partial-class",
+    )
+    ben(
+        "code-vocabulary.pkl",
+        pickle.dumps({"import": 3, 'os.system("shutdown': 1, "-s": 1, '60")': 1}, protocol=4),
+        "pickle",
+        "vocabulary-with-code-fragment",
+    )
+    ben(
+        "half-precision-weights.bin",
+        bytes([0x84, 0xAD, 0x39, 0xAF, 0x77, 0xA7, 0x5F, 0xA4]) + bytes(range(256)) * 4,
+        "pickle",
+        "raw-weights-under-a-pickle-name",
+    )
+    ben(
+        "plain-tags.yaml",
+        b"model:\n  freqs_per_bands: !!python/tuple\n    - 2\n    - 4\n  name: !!python/str demo\n",
+        "config",
+        "yaml-plain-value-tags",
+    )
+    lfs = (
+        b"version https://git-lfs.github.com/spec/v1\noid sha256:" + b"0" * 64 + b"\nsize 1048576\n"
+    )
+    ben("lfs-pointer.safetensors", lfs, "safetensors", "lfs-pointer")
+    ben(
+        "encoded-pointer.safetensors",
+        base64.b64encode(lfs),
+        "safetensors",
+        "text-under-a-safetensors-name",
+    )
+
+    def lookup(special_tokens: Any) -> dict[str, Any]:
+        return {
+            "module": "keras",
+            "class_name": "Sequential",
+            "config": {
+                "name": "m",
+                "layers": [
+                    {
+                        "module": "keras_hub.src.models.whisper.whisper_tokenizer",
+                        "class_name": "WhisperTokenizer",
+                        "config": {
+                            "name": "tok",
+                            "config_file": "tokenizer.json",
+                            "special_tokens": special_tokens,
+                        },
+                        "registered_name": "keras_hub>WhisperTokenizer",
+                    }
+                ],
+            },
+            "registered_name": None,
+        }
+
+    for rel, path in {
+        "tokenizer-file-absolute.keras": "/nonexistent/msscan-corpus/special_tokens.json",
+        "tokenizer-file-home.keras": "~/.msscan-corpus-nonexistent/tokens.json",
+        "tokenizer-file-climbing.keras": "../../../nonexistent-msscan-corpus/tokens.json",
+    }.items():
+        c.add(
+            f"malicious/keras/{rel}",
+            keras_zip(lookup(path)),
+            label="malicious",
+            family="keras",
+            technique="config-file-path",
+            category="file-access",
+            loader="",
+            note="a layer config value is a path on the loading machine (the file named does not exist)",
+        )
+    ben(
+        "tokenizer-inline.keras",
+        keras_zip(lookup({"<|endoftext|>": 101})),
+        "keras",
+        "tokenizer-inline-tokens",
+    )
+    for rel, shard in {
+        "climbing.safetensors.index.json": "../../../../nonexistent-msscan-corpus/environ",
+        "absolute.safetensors.index.json": "/nonexistent/msscan-corpus/passwd",
+    }.items():
+        c.add(
+            f"malicious/hf-json/{rel}",
+            json.dumps({"metadata": {"total_size": 4}, "weight_map": {"w": shard}}).encode(),
+            label="malicious",
+            family="hf-json",
+            technique="shard-index-traversal",
+            category="file-access",
+            loader="",
+            note="a sharded checkpoint index names a shard outside the model directory",
+        )
+    ben(
+        "model.safetensors.index.json",
+        json.dumps(
+            {
+                "metadata": {"total_size": 8},
+                "weight_map": {
+                    "a": "model-00001-of-00002.safetensors",
+                    "b": "model-00002-of-00002.safetensors",
+                },
+            }
+        ).encode(),
+        "hf-json",
+        "shard-index",
+    )
+    c.add(
+        "malicious/link/etc-hostname.safetensors",
+        b"../../../etc/hostname",
+        label="malicious",
+        family="link",
+        technique="link-stored-as-file",
+        category="file-access",
+        loader="",
+        note="a symbolic link committed to a repository, as a hub serves it; a checkout recreates the link",
+    )
+
 
 def main() -> None:
     ap = argparse.ArgumentParser(description=__doc__)

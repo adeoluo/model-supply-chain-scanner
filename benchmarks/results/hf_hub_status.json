@@ -11,7 +11,7 @@
   },
   "flagged_by_the_hub": 16,
   "not_flagged_by_the_hub": 3,
-  "in_repositories_presenting_as_security_tests": 14,
+  "in_repositories_presenting_as_security_tests": 17,
   "neither_flagged_nor_a_declared_test": 0,
   "other_high_alerts": {
    "files": 12,
@@ -21,7 +21,7 @@
     "benign": 4
    },
    "flagged_by_the_hub": 5,
-   "in_repositories_presenting_as_security_tests": 6,
+   "in_repositories_presenting_as_security_tests": 9,
    "in_repositories_that_also_hold_a_payload_file": 9
   },
   "note": "A discovery would be a payload file that the Hub does not flag and that is not in a repository presenting itself as a security test. Statuses are a snapshot of the main branch on the day of the check; files were matched by path, not by hash, and queued scans may finish later."
@@ -39,7 +39,7 @@
     "jFrogScan": "safe",
     "pickleImportScan": "caution",
     "avScan": "suspicious",
-    "virusTotalScan": "queued"
+    "virusTotalScan": "safe"
    },
    "hub_flags_it": true,
    "presents_as_security_test": false,
@@ -63,7 +63,8 @@
    "presents_as_security_test": true,
    "presents_as_security_test_by": [
     "by_name",
-    "by_model_card"
+    "by_model_card",
+    "by_owner"
    ]
   },
   {
@@ -84,7 +85,8 @@
    "presents_as_security_test": true,
    "presents_as_security_test_by": [
     "by_name",
-    "by_model_card"
+    "by_model_card",
+    "by_owner"
    ]
   },
   {
@@ -105,7 +107,8 @@
    "presents_as_security_test": true,
    "presents_as_security_test_by": [
     "by_name",
-    "by_model_card"
+    "by_model_card",
+    "by_owner"
    ]
   },
   {
@@ -126,7 +129,8 @@
    "presents_as_security_test": true,
    "presents_as_security_test_by": [
     "by_name",
-    "by_model_card"
+    "by_model_card",
+    "by_owner"
    ]
   },
   {
@@ -146,7 +150,8 @@
    "hub_flags_it": false,
    "presents_as_security_test": true,
    "presents_as_security_test_by": [
-    "by_name"
+    "by_name",
+    "by_owner"
    ]
   },
   {
@@ -167,7 +172,8 @@
    "presents_as_security_test": true,
    "presents_as_security_test_by": [
     "by_name",
-    "by_model_card"
+    "by_model_card",
+    "by_owner"
    ]
   },
   {
@@ -188,7 +194,8 @@
    "presents_as_security_test": true,
    "presents_as_security_test_by": [
     "by_name",
-    "by_model_card"
+    "by_model_card",
+    "by_owner"
    ]
   },
   {
@@ -203,13 +210,14 @@
     "jFrogScan": "unsafe",
     "pickleImportScan": "unsafe",
     "avScan": "suspicious",
-    "virusTotalScan": "queued"
+    "virusTotalScan": "suspicious"
    },
    "hub_flags_it": true,
    "presents_as_security_test": true,
    "presents_as_security_test_by": [
     "by_name",
-    "by_model_card"
+    "by_model_card",
+    "by_owner"
    ]
   },
   {
@@ -224,13 +232,14 @@
     "jFrogScan": "unsafe",
     "pickleImportScan": "unscanned",
     "avScan": "safe",
-    "virusTotalScan": "safe"
+    "virusTotalScan": "queued"
    },
    "hub_flags_it": true,
    "presents_as_security_test": true,
    "presents_as_security_test_by": [
     "by_name",
-    "by_model_card"
+    "by_model_card",
+    "by_owner"
    ]
   },
   {
@@ -245,7 +254,7 @@
     "jFrogScan": "safe",
     "pickleImportScan": "caution",
     "avScan": "safe",
-    "virusTotalScan": "queued"
+    "virusTotalScan": "safe"
    },
    "hub_flags_it": true,
    "presents_as_security_test": false,
@@ -268,7 +277,8 @@
    "hub_flags_it": true,
    "presents_as_security_test": true,
    "presents_as_security_test_by": [
-    "by_name"
+    "by_name",
+    "by_owner"
    ]
   },
   {
@@ -288,7 +298,8 @@
    "hub_flags_it": true,
    "presents_as_security_test": true,
    "presents_as_security_test_by": [
-    "by_name"
+    "by_name",
+    "by_owner"
    ]
   },
   {
@@ -308,7 +319,8 @@
    "hub_flags_it": true,
    "presents_as_security_test": true,
    "presents_as_security_test_by": [
-    "by_name"
+    "by_name",
+    "by_owner"
    ]
   },
   {
@@ -328,7 +340,8 @@
    "hub_flags_it": true,
    "presents_as_security_test": true,
    "presents_as_security_test_by": [
-    "by_name"
+    "by_name",
+    "by_owner"
    ]
   },
   {
@@ -348,7 +361,8 @@
    "hub_flags_it": true,
    "presents_as_security_test": true,
    "presents_as_security_test_by": [
-    "by_name"
+    "by_name",
+    "by_owner"
    ]
   },
   {
@@ -368,7 +382,8 @@
    "hub_flags_it": false,
    "presents_as_security_test": true,
    "presents_as_security_test_by": [
-    "by_name"
+    "by_name",
+    "by_owner"
    ]
   },
   {
@@ -386,8 +401,10 @@
     "virusTotalScan": "unscanned"
    },
    "hub_flags_it": false,
-   "presents_as_security_test": false,
-   "presents_as_security_test_by": []
+   "presents_as_security_test": true,
+   "presents_as_security_test_by": [
+    "by_owner"
+   ]
   },
   {
    "id": "f7fbf6fdff80d",
@@ -404,8 +421,10 @@
     "virusTotalScan": "unscanned"
    },
    "hub_flags_it": false,
-   "presents_as_security_test": false,
-   "presents_as_security_test_by": []
+   "presents_as_security_test": true,
+   "presents_as_security_test_by": [
+    "by_owner"
+   ]
   },
   {
    "id": "f31ccefeec4f4",
@@ -422,8 +441,10 @@
     "virusTotalScan": "unscanned"
    },
    "hub_flags_it": false,
-   "presents_as_security_test": false,
-   "presents_as_security_test_by": []
+   "presents_as_security_test": true,
+   "presents_as_security_test_by": [
+    "by_owner"
+   ]
   },
   {
    "id": "fbf5dbf15d05c",
@@ -440,8 +461,10 @@
     "virusTotalScan": "safe"
    },
    "hub_flags_it": true,
-   "presents_as_security_test": false,
-   "presents_as_security_test_by": []
+   "presents_as_security_test": true,
+   "presents_as_security_test_by": [
+    "by_owner"
+   ]
   },
   {
    "id": "fe3cd4b1bf050",
@@ -458,8 +481,10 @@
     "virusTotalScan": "safe"
    },
    "hub_flags_it": true,
-   "presents_as_security_test": false,
-   "presents_as_security_test_by": []
+   "presents_as_security_test": true,
+   "presents_as_security_test_by": [
+    "by_owner"
+   ]
   },
   {
    "id": "f599688e1e25f",
@@ -476,8 +501,10 @@
     "virusTotalScan": "safe"
    },
    "hub_flags_it": true,
-   "presents_as_security_test": false,
-   "presents_as_security_test_by": []
+   "presents_as_security_test": true,
+   "presents_as_security_test_by": [
+    "by_owner"
+   ]
   },
   {
    "id": "f3a9b55a7f9b4",
@@ -551,7 +578,8 @@
    "presents_as_security_test": true,
    "presents_as_security_test_by": [
     "by_name",
-    "by_model_card"
+    "by_model_card",
+    "by_owner"
    ]
   },
   {
@@ -572,7 +600,8 @@
    "presents_as_security_test": true,
    "presents_as_security_test_by": [
     "by_name",
-    "by_model_card"
+    "by_model_card",
+    "by_owner"
    ]
   },
   {
@@ -593,7 +622,8 @@
    "presents_as_security_test": true,
    "presents_as_security_test_by": [
     "by_name",
-    "by_model_card"
+    "by_model_card",
+    "by_owner"
    ]
   },
   {
@@ -608,13 +638,14 @@
     "jFrogScan": "queued",
     "pickleImportScan": "safe",
     "avScan": "safe",
-    "virusTotalScan": "safe"
+    "virusTotalScan": "queued"
    },
    "hub_flags_it": true,
    "presents_as_security_test": true,
    "presents_as_security_test_by": [
     "by_name",
-    "by_model_card"
+    "by_model_card",
+    "by_owner"
    ]
   },
   {
@@ -635,7 +666,8 @@
    "presents_as_security_test": true,
    "presents_as_security_test_by": [
     "by_name",
-    "by_model_card"
+    "by_model_card",
+    "by_owner"
    ]
   }
  ]

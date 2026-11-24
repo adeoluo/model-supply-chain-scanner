@@ -28,9 +28,17 @@ from typing import Any
 TOOLS = ("msscan", "picklescan", "modelscan", "fickling", "modelaudit")
 
 WORKER = r"""
-import json, sys, time, os, io, contextlib, logging
+import json, sys, time, os, logging
 from pathlib import Path, PurePosixPath
 logging.disable(logging.CRITICAL)
+# Results go out on a private copy of stdout; the tool's own output goes to /dev/null at the
+# file-descriptor level. sys.stdout stays a real file: replacing it with an in-memory buffer
+# changes what ModelAudit reports (its import-safety proof fails and benign PyTorch files
+# become critical), which would be an error of this harness, not of the tool.
+results = os.fdopen(os.dup(1), "w")
+sink = os.open(os.devnull, os.O_WRONLY)
+sys.stdout.flush(); sys.stderr.flush()
+os.dup2(sink, 1); os.dup2(sink, 2)
 tool, listing = sys.argv[1], sys.argv[2]
 paths = [l.rstrip("\n") for l in open(listing)]
 if tool == "msscan":
@@ -106,13 +114,12 @@ elif tool == "modelaudit":
 for p in paths:
     t0 = time.perf_counter()
     try:
-        with contextlib.redirect_stdout(io.StringIO()), contextlib.redirect_stderr(io.StringIO()):
-            row = scan(p)
+        row = scan(p)
     except BaseException as e:
         row = {"flags": {}, "scanned": False, "error": f"{type(e).__name__}: {e}"[:300], "detail": []}
     row["path"] = p
     row["seconds"] = time.perf_counter() - t0
-    print(json.dumps(row), flush=True)
+    print(json.dumps(row), file=results, flush=True)
 """
 
 

@@ -68,6 +68,9 @@ def test_hub_review_labels() -> None:
     assert label({}, priv("org/Drought_Vulnerability", [], []))[0] == "benign"
     assert label({}, priv("org/POCKET-26B", [], []))[0] == "benign"
     assert label({}, priv("someone/MaliciousModel", [], []))[0] == "security-test"
+    # A path that leaves the model is a payload whatever carries it.
+    for rule in ("MS206", "MS506", "MS701", "MS1004"):
+        assert label({}, priv("org/model", [rule], []))[0] == "payload", rule
     assert (
         label({}, priv("org/dtensor", [], [("torch.distributed.tensor", "DTensor", "library")]))[0]
         == "benign"
