@@ -14,7 +14,7 @@
 
 ---
 
-> **Evidence level: publicly benchmarked, with limits.** The scanner was compared with four other open-source model file scanners (picklescan, modelscan, fickling and ModelAudit). The test files came from three sources: the test files those projects publish, a set written by this scanner's author, and two samples of public files from the Hugging Face Hub (a public website for sharing machine learning models). The two Hub samples hold 12,573 files with no confirmed labels. The second sample was scanned with the scanner frozen, before any tuning on it. Attacks that outside reviewers got past the scanner are listed below with their fixes. Nobody else has reproduced these results, and the scanner is not used in production. [What the levels mean](https://github.com/adeoluo#evidence-levels).
+> **Evidence level: publicly benchmarked, with limits.** The scanner was compared with four other open-source model file scanners (picklescan, modelscan, fickling and ModelAudit). The test files came from three sources: the test files those projects publish, a set written by this scanner's author, and two samples of public files from the Hugging Face Hub (a public website for sharing machine learning models). The two Hub samples hold 12,573 files with no confirmed labels. The second sample was scanned with the scanner frozen, before any tuning on it. Attacks that outside reviewers got past the scanner are listed below with their fixes. Nobody else has reproduced these results, and the scanner is not used in production.
 
 ## Highlights
 
